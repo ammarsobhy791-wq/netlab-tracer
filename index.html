@@ -1,0 +1,1119 @@
+<title>Netlab Tracer</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: Packet Tracer workbench. Title bar, tool strip, white logical workspace, event/PDU panel, grey device palette with Realtime/Simulation switch. Device windows open as full overlays. */
+:root {
+  --bg: #cfd7e3; --chrome: #eef1f6; --chrome-2: #dde3ec; --chrome-line: #aeb9c9; --pal: #c9d2df; --pal-item: #f7f9fc;
+  --title-a: #2a78c8; --title-b: #174f8c; --title-ink: #ffffff;
+  --work: #ffffff; --surface: #ffffff; --ink: #121c2b; --muted: #55657a; --line: #c3ccd9; --grid: #e6ebf2;
+  --accent: #1d5ea8; --accent-ink: #ffffff; --accent-2: #0e9f8e; --good: #1a8a3e; --bad: #cc2b2b; --warn: #c97a00;
+  --term-bg: #0a0f16; --term-fg: #cfdbe8; --term-dim: #6f8197;
+  --shadow: 0 1px 2px rgba(14,26,43,.12), 0 8px 24px rgba(14,26,43,.14);
+  --font: 'IBM Plex Sans Arabic', system-ui, sans-serif; --mono: 'JetBrains Mono', ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0b1017; --chrome: #19222e; --chrome-2: #212c3b; --chrome-line: #34445a; --pal: #141c27; --pal-item: #1f2b3a;
+  --title-a: #1f5fa6; --title-b: #123d70; --work: #0e1520; --surface: #1b2738; --ink: #e5edf6; --muted: #8b9db2; --line: #2c3b4f; --grid: #151f2c;
+  --accent: #4ea1f3; --accent-ink: #06121f; --accent-2: #2dd4bf; --good: #3fc47f; --bad: #f2675e; --warn: #e8a93a; color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #0b1017; --chrome: #19222e; --chrome-2: #212c3b; --chrome-line: #34445a; --pal: #141c27; --pal-item: #1f2b3a;
+  --title-a: #1f5fa6; --title-b: #123d70; --work: #0e1520; --surface: #1b2738; --ink: #e5edf6; --muted: #8b9db2; --line: #2c3b4f; --grid: #151f2c;
+  --accent: #4ea1f3; --accent-ink: #06121f; --accent-2: #2dd4bf; --good: #3fc47f; --bad: #f2675e; --warn: #e8a93a; color-scheme: dark; }
+
+html, body { height: 100%; }
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font); font-size: 14px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); overflow: hidden; }
+#app { height: 100%; display: flex; flex-direction: column; gap: 6px; padding-block: 6px; min-width: 0; max-width: 1180px; margin-inline: auto; }
+button { font: inherit; color: inherit; cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+[hidden] { display: none !important; }
+
+/* title bar + tool strip: chrome stays LTR like Packet Tracer */
+.titlebar, .toolbar, .palette, .panel, .wtabs, .wbar, .wbody { direction: ltr; }
+.panel-b { direction: ltr; }
+.titlebar { display: flex; align-items: center; gap: 10px; padding: 7px 10px; border-radius: 8px; background: linear-gradient(180deg, var(--title-a), var(--title-b)); color: var(--title-ink); box-shadow: var(--shadow); }
+.titlebar .logo { width: 26px; height: 26px; flex: none; }
+.titlebar .logo svg { width: 100%; height: 100%; stroke: #fff; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.titlebar h1 { margin: 0; font-size: 15px; font-weight: 700; letter-spacing: .02em; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.titlebar h1 small { font-weight: 400; opacity: .8; margin-left: 8px; font-size: 11.5px; }
+.tb-btn { background: rgba(255,255,255,.14); border: 1px solid rgba(255,255,255,.28); color: #fff; border-radius: 6px; padding: 5px 9px; min-height: 32px; display: inline-flex; align-items: center; gap: 5px; font-size: 12.5px; white-space: nowrap; }
+.tb-btn:hover { background: rgba(255,255,255,.24); }
+.tb-btn svg, .tool svg, .win-x svg { width: 17px; height: 17px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+.toolbar { display: flex; gap: 4px; align-items: center; padding: 4px; border: 1px solid var(--chrome-line); border-radius: 8px; background: linear-gradient(180deg, var(--chrome), var(--chrome-2)); overflow-x: auto; scrollbar-width: none; }
+.tool { flex: none; width: 40px; height: 36px; display: grid; place-items: center; border: 1px solid transparent; border-radius: 6px; background: transparent; color: var(--ink); }
+.tool:hover { background: var(--chrome); border-color: var(--chrome-line); }
+.tool[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.tool-sep { width: 1px; align-self: stretch; background: var(--chrome-line); margin-inline: 3px; flex: none; }
+.tool-lbl { font-size: 11.5px; color: var(--muted); padding-inline: 6px; white-space: nowrap; flex: none; }
+
+/* workspace */
+.stage { position: relative; flex: 1; min-height: 140px; border: 1px solid var(--chrome-line); border-radius: 6px; overflow: hidden; background: var(--work); }
+#cv { width: 100%; height: 100%; display: block; touch-action: none; user-select: none; -webkit-user-select: none; }
+.hint { position: absolute; inset-inline: 10px; bottom: 8px; font-size: 12px; text-align: center; color: var(--ink); background: color-mix(in srgb, var(--chrome) 92%, transparent); border: 1px solid var(--chrome-line); border-radius: 6px; padding: 6px 9px; pointer-events: none; }
+.toast { position: absolute; inset-inline: 10px; top: 8px; padding: 9px 12px; border-radius: 6px; background: var(--ink); color: var(--work); font-size: 13px; opacity: 0; transform: translateY(-6px); transition: opacity .2s, transform .2s; pointer-events: none; z-index: 5; }
+.toast.show { opacity: 1; transform: none; } .toast.bad { background: var(--bad); color: #fff; } .toast.good { background: var(--good); color: #fff; }
+.zoombtns { position: absolute; inset-inline-end: 8px; top: 8px; display: flex; flex-direction: column; gap: 4px; }
+.zoombtns .tool { background: var(--chrome); border-color: var(--chrome-line); width: 34px; height: 34px; }
+
+/* canvas drawing */
+.d-body { fill: var(--surface); stroke: var(--ink); stroke-width: 1.5; }
+.d-line { stroke: var(--ink); stroke-width: 1.5; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.d-label { fill: var(--ink); font: 600 12px var(--font); text-anchor: middle; paint-order: stroke; stroke: var(--work); stroke-width: 4px; }
+.d-sub { fill: var(--muted); font: 10px var(--mono); text-anchor: middle; paint-order: stroke; stroke: var(--work); stroke-width: 3px; }
+.d-shadow { filter: drop-shadow(0 2px 3px rgba(14,26,43,.25)); }
+.selring { fill: none; stroke: var(--accent); stroke-width: 2; stroke-dasharray: 4 4; opacity: 0; } .sel .selring { opacity: 1; }
+.off-dev { opacity: .45; }
+.led { fill: var(--good); } .led.off { fill: var(--line); }
+.cab { fill: none; stroke: var(--ink); stroke-width: 2.2; stroke-linecap: round; }
+.cab.cross { stroke-dasharray: 7 4; } .cab.fiber { stroke: var(--warn); } .cab.bad { stroke: var(--bad); }
+.lend { stroke: var(--work); stroke-width: 1.5; } .lend.up { fill: var(--good); } .lend.down { fill: var(--bad); }
+.port { font: 9px var(--mono); fill: var(--muted); text-anchor: middle; paint-order: stroke; stroke: var(--work); stroke-width: 3px; }
+.env-rect { stroke: var(--work); stroke-width: 1.5; } .env-line { fill: none; stroke: #fff; stroke-width: 1.4; stroke-linejoin: round; }
+.grid-dot { fill: var(--grid); }
+
+/* event / PDU panel */
+.panel { border: 1px solid var(--chrome-line); border-radius: 6px; background: var(--chrome); display: flex; flex-direction: column; max-height: 30%; min-height: 0; overflow: hidden; }
+.panel-h { display: flex; align-items: center; gap: 8px; padding: 5px 8px; background: linear-gradient(180deg, var(--chrome), var(--chrome-2)); border-bottom: 1px solid var(--chrome-line); }
+.panel-h b { font-size: 13px; flex: 1; } .panel-h .sub { font-size: 11.5px; color: var(--muted); }
+.pbtn { background: var(--pal-item); border: 1px solid var(--chrome-line); border-radius: 5px; padding: 4px 9px; min-height: 30px; font-size: 12.5px; white-space: nowrap; }
+.pbtn:hover { border-color: var(--accent); } .pbtn:disabled { opacity: .45; cursor: default; } .pbtn.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.panel-b { overflow: auto; min-height: 46px; background: var(--work); }
+table.tbl { width: 100%; border-collapse: collapse; font-size: 12px; }
+.tbl th { position: sticky; top: 0; background: var(--chrome-2); text-align: start; font-weight: 600; padding: 4px 8px; border-bottom: 1px solid var(--chrome-line); white-space: nowrap; }
+.tbl td { padding: 5px 8px; border-bottom: 1px solid var(--grid); white-space: nowrap; font-family: var(--mono); font-size: 11.5px; direction: ltr; text-align: left; }
+.tbl tr.ev { cursor: pointer; } .tbl tr.ev:hover td { background: var(--chrome); }
+.tbl .empty { text-align: center; color: var(--muted); font-family: var(--font); padding: 12px; direction: rtl; white-space: normal; }
+.sw { display: inline-block; width: 10px; height: 10px; border-radius: 2px; vertical-align: -1px; margin-inline-end: 6px; }
+.st-ok { color: var(--good); font-weight: 700; } .st-no { color: var(--bad); font-weight: 700; } .st-run { color: var(--warn); font-weight: 700; }
+
+/* palette */
+.palette { border: 1px solid var(--chrome-line); border-radius: 8px; background: var(--pal); display: flex; flex-direction: column; flex: none; }
+.pcats { display: flex; align-items: stretch; gap: 4px; padding: 5px; border-bottom: 1px solid var(--chrome-line); }
+.pcat { flex: 1; min-width: 0; display: grid; place-items: center; gap: 1px; padding: 5px 2px; border: 1px solid transparent; border-radius: 6px; background: transparent; font-size: 10.5px; color: var(--ink); }
+.pcat svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.pcat[aria-selected="true"] { background: var(--pal-item); border-color: var(--chrome-line); color: var(--accent); font-weight: 600; }
+.modesw { display: flex; flex: none; border: 1px solid var(--chrome-line); border-radius: 6px; overflow: hidden; align-self: center; }
+.modesw button { border: 0; background: var(--pal-item); padding: 7px 9px; font-size: 11.5px; min-height: 34px; }
+.modesw button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); font-weight: 600; }
+.pitems { display: flex; gap: 6px; padding: 6px; overflow-x: auto; scrollbar-width: none; min-height: 74px; }
+.pit { flex: none; width: 70px; display: grid; justify-items: center; gap: 2px; padding: 5px 2px 4px; border: 1px solid var(--chrome-line); border-radius: 6px; background: var(--pal-item); font-size: 11px; }
+.pit svg { width: 44px; height: 38px; }
+.pit[aria-pressed="true"] { border-color: var(--accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 40%, transparent); }
+.pname { padding: 3px 10px 6px; font-size: 11.5px; color: var(--muted); min-height: 22px; }
+
+/* device window */
+.overlay { position: fixed; inset: 0; z-index: 30; background: rgba(5,10,16,.55); display: grid; place-items: center; padding: max(8px, env(safe-area-inset-top, 0px)) max(8px, env(safe-area-inset-right, 0px)) max(8px, env(safe-area-inset-bottom, 0px)) max(8px, env(safe-area-inset-left, 0px)); }
+.win { width: min(760px, 100%); height: min(640px, 100%); background: var(--chrome); border: 1px solid var(--chrome-line); border-radius: 8px; display: flex; flex-direction: column; overflow: hidden; box-shadow: var(--shadow); }
+.wbar { display: flex; align-items: center; gap: 8px; padding: 6px 8px 6px 10px; background: linear-gradient(180deg, var(--title-a), var(--title-b)); color: #fff; }
+.wbar span { flex: 1; font-weight: 600; font-size: 14px; } .wbar small { opacity: .8; font-weight: 400; margin-left: 8px; }
+.win-x { background: rgba(255,255,255,.16); border: 1px solid rgba(255,255,255,.3); color: #fff; border-radius: 6px; width: 34px; height: 30px; display: grid; place-items: center; }
+.wtabs { display: flex; gap: 2px; padding: 6px 8px 0; border-bottom: 1px solid var(--chrome-line); background: var(--chrome-2); }
+.wtab { border: 1px solid var(--chrome-line); border-bottom: 0; border-radius: 6px 6px 0 0; background: var(--chrome); padding: 8px 14px; font-size: 13px; color: var(--muted); }
+.wtab[aria-selected="true"] { background: var(--work); color: var(--accent); font-weight: 600; position: relative; top: 1px; }
+.wbody { flex: 1; min-height: 0; position: relative; background: var(--work); }
+.wp { position: absolute; inset: 0; overflow: auto; padding: 12px; }
+.wp.term { padding: 0; display: flex; flex-direction: column; background: var(--term-bg); }
+.subbar { display: flex; align-items: center; gap: 8px; padding: 6px 10px; background: var(--chrome-2); border-bottom: 1px solid var(--chrome-line); font-size: 12.5px; }
+
+/* terminal */
+#out { flex: 1; min-height: 0; overflow: auto; margin: 0; padding: 10px; font: 12.5px/1.45 var(--mono); color: var(--term-fg); white-space: pre-wrap; word-break: break-word; direction: ltr; text-align: left; }
+.chips { display: flex; gap: 6px; overflow-x: auto; padding: 6px 8px 0; scrollbar-width: none; direction: ltr; }
+.chip { flex: none; background: #16202c; color: var(--term-fg); border: 1px solid #263445; border-radius: 999px; padding: 5px 10px; font: 12px var(--mono); }
+.cmd { display: flex; align-items: center; gap: 6px; padding: 8px; direction: ltr; }
+.cmd label { font: 12.5px var(--mono); color: #6fb6ff; white-space: nowrap; }
+.cmd input { flex: 1; min-width: 0; background: #101823; color: var(--term-fg); border: 1px solid #263445; border-radius: 6px; padding: 9px 10px; font: 14px var(--mono); }
+.cmd button { background: var(--accent); color: var(--accent-ink); border: 0; border-radius: 6px; padding: 9px 13px; font-weight: 600; }
+.t-err { color: #ff8a80; } .t-dim { color: var(--term-dim); }
+
+/* forms */
+.sec { border: 1px solid var(--line); border-radius: 6px; margin-bottom: 8px; background: var(--chrome); }
+.sec summary { cursor: pointer; padding: 8px 10px; font-weight: 600; font-size: 12.5px; letter-spacing: .03em; list-style: none; display: flex; align-items: center; gap: 8px; }
+.sec summary::before { content: '▸'; color: var(--muted); } .sec[open] summary::before { content: '▾'; }
+.sec .in { padding: 4px 10px 10px; display: grid; gap: 8px; background: var(--work); border-top: 1px solid var(--line); }
+.fld { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; } .fld.one { grid-template-columns: 1fr; } .fld.three { grid-template-columns: repeat(3, 1fr); }
+.fld label, .lab { display: flex; flex-direction: column; gap: 3px; font-size: 12px; color: var(--muted); min-width: 0; }
+input[type=text], .fld select, .qp select { background: var(--surface); color: var(--ink); border: 1px solid var(--chrome-line); border-radius: 5px; padding: 8px; font: 13px var(--mono); direction: ltr; min-width: 0; width: 100%; }
+input.inv { border-color: var(--bad); }
+.chk { flex-direction: row !important; align-items: center; gap: 8px !important; color: var(--ink) !important; font-size: 13px !important; }
+.dot { width: 9px; height: 9px; border-radius: 50%; background: var(--bad); display: inline-block; } .dot.up { background: var(--good); }
+.msg { font-size: 12px; color: var(--muted); margin: 0; }
+.rt { display: flex; gap: 8px; align-items: center; padding: 6px 0; border-bottom: 1px dashed var(--line); font: 12px var(--mono); direction: ltr; }
+.rt span { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+
+/* physical + desktop */
+.chassis { border: 2px solid var(--ink); border-radius: 10px; padding: 12px; background: linear-gradient(180deg, var(--chrome), var(--chrome-2)); }
+.chassis .ports { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 8px; }
+.ptile { border: 1px solid var(--chrome-line); border-radius: 6px; background: var(--work); padding: 7px 8px; display: grid; gap: 3px; font: 11px var(--mono); direction: ltr; }
+.ptile i { display: block; height: 14px; border-radius: 3px; background: var(--chrome-2); border: 1px solid var(--chrome-line); }
+.ptile .l { display: flex; align-items: center; gap: 5px; color: var(--muted); }
+.pwr { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.pwrbtn { width: 56px; height: 56px; border-radius: 50%; border: 3px solid var(--chrome-line); background: var(--chrome-2); display: grid; place-items: center; }
+.pwrbtn svg { width: 26px; height: 26px; stroke: var(--muted); fill: none; stroke-width: 2.2; stroke-linecap: round; }
+.pwrbtn[aria-pressed="true"] { border-color: var(--good); } .pwrbtn[aria-pressed="true"] svg { stroke: var(--good); }
+.desk { display: grid; grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); gap: 12px; padding: 6px; }
+.app { display: grid; justify-items: center; gap: 6px; padding: 14px 6px; border: 1px solid var(--line); border-radius: 10px; background: var(--chrome); font-size: 12.5px; text-align: center; }
+.app svg { width: 40px; height: 40px; stroke: var(--accent); fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+
+dialog { background: var(--chrome); color: var(--ink); border: 1px solid var(--chrome-line); border-radius: 10px; padding: 0; width: min(520px, calc(100vw - 32px)); max-height: 84vh; box-shadow: var(--shadow); }
+dialog::backdrop { background: rgba(5, 10, 16, .55); }
+.dlg { padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+.dlg h3 { margin: 0; font-size: 16px; }
+.dlg textarea { width: 100%; height: 150px; background: var(--surface); color: var(--ink); border: 1px solid var(--chrome-line); border-radius: 6px; padding: 8px; font: 11px var(--mono); direction: ltr; }
+.row { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.btn { background: var(--pal-item); border: 1px solid var(--chrome-line); border-radius: 6px; padding: 8px 12px; min-height: 38px; display: inline-flex; align-items: center; gap: 6px; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
+.sc { text-align: start; width: 100%; display: block; } .sc b { display: block; margin-bottom: 2px; } .sc span { color: var(--muted); font-size: 12.5px; white-space: normal; font-weight: 400; }
+.opts { display: grid; gap: 6px; max-height: 50vh; overflow: auto; }
+.opt { text-align: start; display: flex; justify-content: space-between; gap: 8px; font-family: var(--mono); direction: ltr; }
+.opt:disabled { opacity: .45; }
+.info { width: 100%; border-collapse: collapse; font-size: 12.5px; } .info td { padding: 6px 4px; border-bottom: 1px solid var(--line); } .info td:first-child { color: var(--muted); width: 38%; } .info td:last-child { font-family: var(--mono); direction: ltr; text-align: left; }
+.hero-wrap { background: radial-gradient(420px 200px at 50% 0%, color-mix(in srgb, var(--accent) 18%, transparent), transparent 70%); padding: 16px 16px 0; text-align: center; }
+.hero-wrap svg { width: 100%; max-width: 330px; height: auto; }
+.pulse { animation: pulse 2.4s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+@keyframes pulse { 0%, 100% { opacity: .35; transform: scale(.8); } 50% { opacity: 1; transform: scale(1.15); } }
+.wl { padding: 6px 18px 18px; display: flex; flex-direction: column; gap: 12px; }
+.wl h2 { margin: 0; font-size: 20px; text-align: center; } .wl p.lead { margin: 0; text-align: center; color: var(--muted); line-height: 1.7; }
+.feat { display: flex; gap: 10px; padding: 9px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--work); }
+.feat svg { width: 22px; height: 22px; flex: none; stroke: var(--accent); fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; margin-top: 2px; }
+.feat b { display: block; font-size: 13.5px; } .feat span { color: var(--muted); font-size: 12.5px; line-height: 1.55; }
+.cheat details { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; margin-bottom: 8px; background: var(--work); } .cheat summary { cursor: pointer; font-weight: 600; }
+.cheat pre { margin: 8px 0 0; font: 12px/1.6 var(--mono); direction: ltr; text-align: left; white-space: pre-wrap; }
+@media (prefers-reduced-motion: reduce) { .pulse { animation: none; } .toast { transition: none; } }
+@media (max-width: 480px) { .titlebar h1 small { display: none; } .tb-btn .lb { display: none; } .wtab { padding: 8px 10px; } .fld.three { grid-template-columns: 1fr 1fr; } .overlay { padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px); place-items: stretch; } .win { width: 100%; height: 100%; border-radius: 0; } }
+</style>
+<div id="app" dir="rtl" lang="ar">
+  <header class="titlebar">
+    <span class="logo" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><circle cx="4.5" cy="5" r="1.8"/><circle cx="19.5" cy="5" r="1.8"/><circle cx="4.5" cy="19" r="1.8"/><circle cx="19.5" cy="19" r="1.8"/><path d="M6 6.3l3.9 3.6M18 6.3l-3.9 3.6M6 17.7l3.9-3.6M18 17.7l-3.9-3.6"/></svg></span>
+    <h1>Netlab Tracer<small>Logical Workspace</small></h1>
+    <button class="tb-btn" id="bScn" type="button"><svg viewBox="0 0 24 24"><path d="M12 3l9 5-9 5-9-5zM3 13l9 5 9-5"/></svg><span class="lb">سيناريوهات</span></button>
+    <button class="tb-btn" id="bCheat" type="button"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 10l3 2-3 2M12 15h5"/></svg><span class="lb">الأوامر</span></button>
+    <button class="tb-btn" id="bSave" type="button"><svg viewBox="0 0 24 24"><path d="M5 4h11l3 3v13H5zM8 4v5h7M8 20v-6h8v6"/></svg><span class="lb">حفظ</span></button>
+    <button class="tb-btn" id="bHelp" type="button" aria-label="عن المحاكي"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 115 0c0 1.7-2.5 2-2.5 4M12 17h.01"/></svg></button>
+  </header>
+
+  <div class="toolbar" id="toolbar" role="toolbar" aria-label="الأدوات">
+    <button class="tool" type="button" data-tool="select" aria-pressed="true" title="Select" aria-label="تحديد وتحريك"><svg viewBox="0 0 24 24"><path d="M5 3l14 8-6 2-3 6z"/></svg></button>
+    <button class="tool" type="button" data-tool="del" aria-pressed="false" title="Delete" aria-label="حذف"><svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6"/></svg></button>
+    <button class="tool" type="button" data-tool="pdu" aria-pressed="false" title="Add Simple PDU" aria-label="إضافة حزمة PDU"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 8l9 6 9-6"/></svg></button>
+    <span class="tool-sep"></span>
+    <button class="tool" type="button" id="bFit" title="Fit" aria-label="ملاءمة"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+    <button class="tool" type="button" id="bClear" title="New" aria-label="شبكة جديدة"><svg viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6zM14 3v4h4M12 11v6M9 14h6"/></svg></button>
+    <span class="tool-lbl" id="toolLbl"></span>
+  </div>
+
+  <div class="stage">
+    <svg id="cv" role="img" aria-label="مخطط الشبكة">
+      <g id="world"><g id="gGrid"></g><g id="gLinks"></g><g id="gDev"></g><g id="gPkt"></g></g>
+    </svg>
+    <div class="toast" id="toast" role="status"></div>
+    <div class="hint" id="hint"></div>
+  </div>
+
+  <section class="panel" id="panel" aria-label="لوحة الأحداث">
+    <div class="panel-h" id="panelH"></div>
+    <div class="panel-b" id="panelB"></div>
+  </section>
+
+  <footer class="palette">
+    <div class="pcats" id="pcats">
+      <button class="pcat" type="button" data-cat="net" aria-selected="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M7 10h10M14 7l3 3-3 3M17 14H7M10 11l-3 3 3 3"/></svg>Network</button>
+      <button class="pcat" type="button" data-cat="end" aria-selected="false"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg>End Devices</button>
+      <button class="pcat" type="button" data-cat="con" aria-selected="false"><svg viewBox="0 0 24 24"><path d="M10 14a4 4 0 005.7 0l3-3a4 4 0 00-5.7-5.7l-1 1M14 10a4 4 0 00-5.7 0l-3 3a4 4 0 005.7 5.7l1-1"/></svg>Connections</button>
+      <div class="modesw" role="group" aria-label="وضع التشغيل">
+        <button type="button" data-mode="rt" aria-pressed="true">Realtime</button>
+        <button type="button" data-mode="sim" aria-pressed="false">Simulation</button>
+      </div>
+    </div>
+    <div class="pitems" id="pItems"></div>
+    <div class="pname" id="pName"></div>
+  </footer>
+
+  <div class="overlay" id="win" hidden>
+    <div class="win" role="dialog" aria-modal="true" aria-labelledby="wTitle">
+      <div class="wbar"><span id="wTitle"></span><button class="win-x" type="button" id="wClose" aria-label="إغلاق"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+      <div class="wtabs" role="tablist" id="wTabs"></div>
+      <div class="wbody">
+        <div class="wp" id="pPhys" hidden></div>
+        <div class="wp" id="pCfg" hidden></div>
+        <div class="wp term" id="pCli" hidden>
+          <div class="subbar" id="cliBar" hidden><button class="pbtn" type="button" id="cliBack">رجوع إلى Desktop</button><span id="cliTitle">Command Prompt</span></div>
+          <pre id="out"></pre>
+          <div class="chips" id="chips"></div>
+          <form class="cmd" id="cmdForm" autocomplete="off"><label id="prompt" for="cmdIn"></label><input id="cmdIn" type="text" inputmode="text" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="أمر"><button type="submit">أرسل</button></form>
+        </div>
+        <div class="wp" id="pDesk" hidden></div>
+        <div class="wp" id="pIpc" hidden></div>
+      </div>
+    </div>
+  </div>
+
+  <dialog id="dlgWelcome"><div>
+    <div class="hero-wrap">
+      <svg viewBox="0 0 340 172" role="img" aria-label="رسم توضيحي لشبكة">
+        <defs><linearGradient id="hg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" style="stop-color:var(--accent)"/><stop offset="1" style="stop-color:var(--accent-2)"/></linearGradient></defs>
+        <circle cx="170" cy="86" r="62" fill="none" stroke="var(--line)" stroke-dasharray="3 6"/>
+        <g fill="none" stroke="var(--line)" stroke-width="2"><path d="M170 86L58 40M170 86L50 130M170 86L284 36M170 86L292 128M170 86L170 156"/></g>
+        <g fill="none" stroke="url(#hg)" stroke-width="2.4" stroke-linecap="round"><path d="M170 86L114 63M170 86L110 108M170 86L227 61M170 86L231 107"/></g>
+        <circle class="pulse" cx="114" cy="63" r="4" fill="var(--accent-2)"/><circle class="pulse" cx="227" cy="61" r="4" fill="var(--accent)" style="animation-delay:.6s"/><circle class="pulse" cx="110" cy="108" r="4" fill="var(--accent)" style="animation-delay:1.2s"/><circle class="pulse" cx="231" cy="107" r="4" fill="var(--accent-2)" style="animation-delay:1.8s"/>
+        <g stroke="var(--ink)" stroke-width="1.6" fill="var(--surface)"><rect x="34" y="28" width="48" height="24" rx="5"/><rect x="26" y="116" width="40" height="26" rx="4"/><rect x="262" y="24" width="44" height="26" rx="4"/><rect x="268" y="116" width="48" height="24" rx="5"/><rect x="150" y="146" width="40" height="22" rx="4"/></g>
+        <g fill="var(--accent-2)"><circle cx="44" cy="40" r="2.2"/><circle cx="54" cy="40" r="2.2"/><circle cx="64" cy="40" r="2.2"/><circle cx="74" cy="40" r="2.2"/><circle cx="278" cy="128" r="2.2"/><circle cx="288" cy="128" r="2.2"/><circle cx="298" cy="128" r="2.2"/><circle cx="308" cy="128" r="2.2"/></g>
+        <circle cx="170" cy="86" r="27" fill="url(#hg)"/>
+        <path d="M156 82h28M178 76l6 6-6 6M184 92h-28M162 86l-6 6 6 6" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" transform="translate(0 -1)"/>
+      </svg>
+    </div>
+    <div class="wl">
+      <h2>Netlab Tracer</h2>
+      <p class="lead">بيئة تشبه Packet Tracer على موبايلك: اختر الجهاز من اللوحة تحت، ضعه على مساحة العمل، وصّله بكابل، واضبطه من نافذته أو من الـ CLI.</p>
+      <div class="feat"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 8l9 6 9-6"/></svg><div><b>وضع Simulation</b><span>Event List وزر Capture / Forward وPlay، واضغط أي حدث لقراءة تفاصيل الحزمة.</span></div></div>
+      <div class="feat"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 10l3 2-3 2M12 15h5"/></svg><div><b>نافذة لكل جهاز</b><span>Physical وConfig وCLI. وعلى الـ PC تبويب Desktop فيه IP Configuration وCommand Prompt.</span></div></div>
+      <div class="feat"><svg viewBox="0 0 24 24"><path d="M10 14a4 4 0 005.7 0l3-3a4 4 0 00-5.7-5.7l-1 1M14 10a4 4 0 00-5.7 0l-3 3a4 4 0 005.7 5.7l1-1"/></svg><div><b>أنواع كابلات حقيقية</b><span>Straight وCross وFiber. لو استخدمت النوع الغلط الرابط يفضل أحمر.</span></div></div>
+      <button class="btn primary" type="button" id="wlScn" style="justify-content:center">ابدأ بسيناريو جاهز</button>
+      <button class="btn" type="button" id="wlEmpty" style="justify-content:center">ابدأ بمساحة عمل فاضية</button>
+    </div>
+  </div></dialog>
+
+  <dialog id="dlgScn"><div class="dlg"><h3>سيناريوهات جاهزة</h3><div id="scList" class="row" style="flex-direction:column;align-items:stretch"></div><button class="btn" type="button" data-close>إغلاق</button></div></dialog>
+
+  <dialog id="dlgPort"><div class="dlg"><h3 id="portTitle"></h3><div class="opts" id="portOpts"></div><button class="btn" type="button" data-close>إلغاء</button></div></dialog>
+
+  <dialog id="dlgPdu"><div class="dlg"><h3 id="pduTitle"></h3><table class="info" id="pduInfo"></table><button class="btn" type="button" data-close>إغلاق</button></div></dialog>
+
+  <dialog id="dlgCheat"><div class="dlg cheat"><h3>ورقة الأوامر</h3>
+    <details open><summary>على الـ PC (Command Prompt)</summary><pre>ipconfig /all
+ping 192.168.2.10
+tracert 192.168.2.10
+arp -a</pre></details>
+    <details><summary>راوتر: ضبط البورت</summary><pre>enable
+configure terminal
+interface gigabitethernet0/0
+ ip address 192.168.1.1 255.255.255.0
+ no shutdown
+ end</pre></details>
+    <details><summary>راوتر: static route</summary><pre>configure terminal
+ip route 10.3.0.0 255.255.255.0 10.23.0.3
+end
+show ip route</pre></details>
+    <details><summary>سويتش: VLAN</summary><pre>configure terminal
+interface fastethernet0/2
+ switchport access vlan 10
+ end
+show vlan brief
+show mac address-table</pre></details>
+    <details><summary>أوامر الفحص</summary><pre>show ip interface brief
+show running-config
+show arp
+ping &lt;ip&gt;
+traceroute &lt;ip&gt;</pre></details>
+    <button class="btn" type="button" data-close>إغلاق</button></div></dialog>
+
+  <dialog id="dlgSave"><div class="dlg"><h3>حفظ وتحميل الشبكة</h3>
+    <p class="msg">انسخ النص واحفظه في ملاحظاتك. للتحميل الصق النص هنا واضغط تحميل. الشبكة تتحفظ تلقائياً في هذا المتصفح أيضاً.</p>
+    <textarea id="saveTxt" aria-label="بيانات الشبكة JSON"></textarea>
+    <div class="row"><button class="btn primary" type="button" id="bCopy">نسخ</button><button class="btn" type="button" id="bLoad">تحميل</button><button class="btn" type="button" data-close>إغلاق</button></div></div></dialog>
+</div>
+<script>
+/* ===== Engine: devices, links, L2 flooding, L3 routing, ping/trace ===== */
+const NS = {};
+NS.state = { devices: [], seq: {} };
+NS.fresh = () => { NS.state = { devices: [], seq: {} }; };
+
+NS.ip2n = s => { const p = String(s).split('.').map(Number); return p.length === 4 && p.every(x => x >= 0 && x <= 255 && Number.isInteger(x)) ? ((p[0] << 24) >>> 0) + (p[1] << 16) + (p[2] << 8) + p[3] : null; };
+NS.n2ip = n => [n >>> 24, (n >>> 16) & 255, (n >>> 8) & 255, n & 255].join('.');
+NS.maskLen = m => { const n = NS.ip2n(m); if (n === null) return null; let c = 0, seen0 = false; for (let b = 31; b >= 0; b--) { const bit = (n >>> b) & 1; if (bit) { if (seen0) return null; c++; } else seen0 = true; } return c; };
+NS.net = (ip, m) => (NS.ip2n(ip) & NS.ip2n(m)) >>> 0;
+NS.sameNet = (a, b, m) => NS.net(a, m) === NS.net(b, m);
+NS.mac = (() => { let k = 0; return () => { k++; return '00e0.' + (0xa000 + k * 37).toString(16).padStart(4, '0') + '.' + (0x1000 + k * 91).toString(16).padStart(4, '0'); }; })();
+
+NS.dev = id => NS.state.devices.find(d => d.id === id);
+NS.nextId = () => 'd' + Math.random().toString(36).slice(2, 8);
+
+NS.MODELS = { Router: { type: 'router', label: 'Router' }, Switch: { type: 'switch', label: 'Switch' }, PC: { type: 'pc', label: 'PC' }, Laptop: { type: 'pc', label: 'Laptop' }, Server: { type: 'pc', label: 'Server' } };
+NS.addDevice = (type, x, y, model) => {
+  model = model || { pc: 'PC', switch: 'Switch', router: 'Router' }[type];
+  const n = NS.state.seq[model] || 0; NS.state.seq[model] = n + 1;
+  const d = { id: NS.nextId(), type, model, x, y, ifaces: [], routes: [], arp: {}, mac: {}, mode: 'user', ctx: null, off: false, name: model + n, host: model === 'Switch' ? 'Switch' : model === 'Router' ? 'Router' : model + n };
+  if (type === 'pc') { d.gw = ''; d.ifaces.push(NS.mkIf('FastEthernet0', false)); }
+  if (type === 'switch') for (let i = 1; i <= 8; i++) d.ifaces.push(NS.mkIf('FastEthernet0/' + i, false));
+  if (type === 'router') for (let i = 0; i < 3; i++) d.ifaces.push(NS.mkIf('GigabitEthernet0/' + i, true));
+  d.ifaces.forEach(i => { i.dev = d.id; });
+  NS.state.devices.push(d); return d;
+};
+NS.short = n => n.replace('GigabitEthernet', 'Gi').replace('FastEthernet', 'Fa');
+NS.mkIf = (name, shut) => ({ name, ip: '', mask: '', shut, vlan: 1, link: null, mac: NS.mac() });
+NS.iface = (d, name) => d.ifaces.find(i => i.name === name);
+NS.peer = i => i.link ? { dev: NS.dev(i.link.dev), iface: null, name: i.link.iface } : null;
+NS.peerIf = i => { if (!i.link) return null; const d = NS.dev(i.link.dev); return d ? { dev: d, iface: NS.iface(d, i.link.iface) } : null; };
+NS.cls = d => d.type === 'switch' ? 'mdix' : 'mdi';
+NS.cableOk = i => {
+  const c = (i.link && i.link.cable) || 'auto'; if (c === 'auto' || c === 'fiber') return true;
+  const p = NS.peerIf(i); if (!p) return false; const me = NS.dev(p.iface.link.dev); if (!me) return false;
+  const same = NS.cls(me) === NS.cls(p.dev); return c === 'cross' ? same : !same;
+};
+NS.linkUp = i => { const p = NS.peerIf(i); if (!p || i.shut || p.iface.shut || p.dev.off) return false; const me = NS.dev(i.dev); if (me && me.off) return false; return NS.cableOk(i); };
+NS.freePorts = d => d.ifaces.filter(i => !i.link);
+
+NS.connect = (a, b, cable, pa, pb) => {
+  if (a === b) return 'لا يمكن توصيل الجهاز بنفسه';
+  const ia = pa ? NS.iface(a, pa) : a.ifaces.find(i => !i.link), ib = pb ? NS.iface(b, pb) : b.ifaces.find(i => !i.link);
+  if (!ia || ia.link) return a.name + ': لا يوجد بورت فاضي';
+  if (!ib || ib.link) return b.name + ': لا يوجد بورت فاضي';
+  let c = cable || 'auto'; if (c === 'auto') c = ((a.type === 'switch') === (b.type === 'switch')) ? 'cross' : 'straight';
+  ia.link = { dev: b.id, iface: ib.name, cable: c }; ib.link = { dev: a.id, iface: ia.name, cable: c };
+  return null;
+};
+NS.disconnect = i => { const p = NS.peerIf(i); if (p) p.iface.link = null; i.link = null; };
+NS.removeDevice = d => { d.ifaces.forEach(i => NS.disconnect(i)); NS.state.devices = NS.state.devices.filter(x => x !== d); };
+
+/* L2: flood from an interface through switches (same VLAN) looking for an IP owner */
+NS.l2reach = (src, sIf, ip) => {
+  if (!NS.linkUp(sIf)) return null;
+  const first = NS.peerIf(sIf); const seen = new Set();
+  const stack = [{ d: first.dev, i: first.iface, path: [src.id] }];
+  while (stack.length) {
+    const { d, i, path } = stack.pop(); const key = d.id + ':' + i.name;
+    if (seen.has(key)) continue; seen.add(key);
+    if (d.type !== 'switch') { if (i.ip === ip && !i.shut) return { dev: d, iface: i, path: path.concat(d.id) }; continue; }
+    const v = i.vlan; d.mac[sIf.mac] = { port: i.name, vlan: v };
+    for (const j of d.ifaces) {
+      if (j === i || j.vlan !== v || !NS.linkUp(j)) continue;
+      const p = NS.peerIf(j); stack.push({ d: p.dev, i: p.iface, path: path.concat(d.id) });
+    }
+  }
+  return null;
+};
+
+/* L3: choose next hop for destination ip from device d */
+NS.route = (d, dst) => {
+  let best = null;
+  for (const i of d.ifaces) {
+    if (!i.ip || i.shut) continue;
+    if (NS.sameNet(i.ip, dst, i.mask)) { const l = NS.maskLen(i.mask); if (!best || l > best.len) best = { len: l, iface: i, nh: dst, kind: 'C' }; }
+  }
+  if (best) return best;
+  if (d.type === 'pc') {
+    if (!d.gw) return { err: 'no-gw' };
+    const i = d.ifaces[0];
+    if (!i.ip) return { err: 'no-ip' };
+    if (!NS.sameNet(i.ip, d.gw, i.mask)) return { err: 'gw-off' };
+    return { iface: i, nh: d.gw, kind: 'G' };
+  }
+  for (const r of d.routes) {
+    const l = NS.maskLen(r.mask);
+    if (NS.net(dst, r.mask) !== NS.net(r.net, r.mask)) continue;
+    const out = d.ifaces.find(i => i.ip && !i.shut && NS.sameNet(i.ip, r.via, i.mask));
+    if (out && (!best || l > best.len)) best = { len: l, iface: out, nh: r.via, kind: 'S' };
+  }
+  return best || { err: 'no-route' };
+};
+
+NS.owner = ip => { for (const d of NS.state.devices) for (const i of d.ifaces) if (i.ip === ip && !i.shut) return { d, i }; return null; };
+
+/* Walk one packet from device `src` to dst ip. Returns {ok, steps, reason, at} */
+NS.srcIpFor = (d, dst) => d.type === 'pc' ? d.ifaces[0].ip : ((NS.route(d, dst) || {}).iface || {}).ip || '';
+NS.send = (src, dst, label, srcIp) => {
+  const steps = []; steps.hops = []; let cur = src, ttl = 16, T = 128; const lbl = label || 'ICMP'; srcIp = srcIp || NS.srcIpFor(src, dst);
+  for (let hop = 0; hop < 20; hop++) {
+    if (cur.off) return { ok: false, steps, at: cur, reason: 'off', msg: cur.name + ' مطفأ (Power OFF)', T };
+    if (cur.ifaces.some(i => i.ip === dst && !i.shut)) return { ok: true, steps, at: cur, ttl, T };
+    if (cur.type === 'switch') return { ok: false, steps, at: cur, reason: 'drop', msg: cur.name + ' جهاز Layer 2 ولا يمرر الحزمة لـ IP' };
+    if (hop > 0 && cur.type === 'pc') return { ok: false, steps, at: cur, reason: 'drop', msg: cur.name + ' ليس راوتر ولا يمرر الحزم' };
+    if (ttl <= 0) return { ok: false, steps, at: cur, reason: 'ttl', msg: 'انتهى الـ TTL عند ' + cur.name + ' (احتمال Routing Loop)' };
+    const r = NS.route(cur, dst);
+    if (r.err) {
+      const m = { 'no-gw': 'لا يوجد Default Gateway على ' + cur.name, 'no-ip': 'لم يتم ضبط IP على ' + cur.name, 'gw-off': 'الـ Gateway خارج شبكة ' + cur.name, 'no-route': 'لا يوجد route إلى ' + dst + ' على ' + cur.name };
+      return { ok: false, steps, at: cur, reason: r.err, msg: m[r.err] };
+    }
+    const hit = NS.l2reach(cur, r.iface, r.nh);
+    if (!hit) {
+      const why = !r.iface.link ? 'البورت ' + r.iface.name + ' غير متوصل بكابل' : !NS.linkUp(r.iface) ? 'البورت ' + r.iface.name + ' مقفول (shutdown)' : 'فشل ARP لـ ' + r.nh + ': لا يوجد جهاز بهذا الـ IP على نفس الـ VLAN/الشبكة';
+      return { ok: false, steps, at: cur, reason: 'arp', msg: why };
+    }
+    cur.arp[r.nh] = hit.iface.mac;
+    if (cur.type === 'router') T--;
+    for (let k = 0; k < hit.path.length - 1; k++) steps.push({ from: hit.path[k], to: hit.path[k + 1], label: lbl, srcIp, dstIp: dst, ttl: T });
+    cur = hit.dev; ttl--; steps.hops.push({ dev: cur, ip: hit.iface.ip });
+  }
+  return { ok: false, steps, at: cur, reason: 'ttl', msg: 'تجاوز الحد الأقصى للقفزات' };
+};
+
+/* Full echo: request + reply */
+NS.ping = (src, dstIp) => {
+  const srcIp = NS.srcIpFor(src, dstIp);
+  const fwd = NS.send(src, dstIp, 'ICMP', srcIp);
+  const tag = (st, dir) => st.map(x => Object.assign({ dir }, x));
+  if (!fwd.ok) return { ok: false, steps: tag(fwd.steps, 'req'), fail: fwd, dir: 'request', srcIp };
+  const back = NS.send(fwd.at, srcIp, 'ICMP', dstIp);
+  const steps = tag(fwd.steps, 'req').concat(tag(back.steps, 'rep'));
+  if (!back.ok) return { ok: false, steps, fail: back, dir: 'reply', srcIp };
+  return { ok: true, steps, ttl: back.T, hops: fwd.steps.length, srcIp, dstAt: fwd.at };
+};
+
+NS.serialize = () => JSON.stringify({ v: 2, seq: NS.state.seq, devices: NS.state.devices.map(d => Object.assign({}, d, { mode: 'user', ctx: null })) });
+NS.load = txt => { const o = JSON.parse(txt); if (!o || !Array.isArray(o.devices)) throw new Error('ملف غير صالح'); NS.state = { devices: o.devices, seq: o.seq || {} }; NS.state.devices.forEach(d => { d.mode = 'user'; d.ctx = null; d.arp = d.arp || {}; d.mac = d.mac || {}; d.model = d.model || { pc: 'PC', switch: 'Switch', router: 'Router' }[d.type]; d.host = d.host || d.name; d.off = !!d.off; d.ifaces.forEach(i => { i.dev = d.id; }); }); };
+
+/* ===== CLI: Cisco IOS style for router/switch, Windows style for PC ===== */
+const pre = (tok, word, min) => !!tok && tok.length >= (min || 1) && word.startsWith(tok.toLowerCase());
+const pad = (s, n) => String(s).padEnd(n, ' ');
+
+NS.prompt = d => {
+  if (d.type === 'pc') return 'C:\\>';
+  const m = { user: '>', priv: '#', config: '(config)#', cfgif: '(config-if)#' }[d.mode];
+  return (d.host || d.name) + m;
+};
+
+NS.findIface = (d, txt) => {
+  const m = /^([a-z]+)\s*(\d+(?:\/\d+)?)$/i.exec(txt.replace(/\s+/g, ''));
+  if (!m) return null; const kind = m[1].toLowerCase(), num = m[2];
+  return d.ifaces.find(i => i.name.endsWith(num) && ((d.type === 'router' && pre(kind, 'gigabitethernet', 1)) || (d.type === 'switch' && pre(kind, 'fastethernet', 1))) && (kind[0] === i.name[0].toLowerCase() || true));
+};
+
+NS.exec = (d, line) => {
+  line = line.trim(); if (!line) return { out: '' };
+  const t = line.split(/\s+/);
+  if (d.type === 'pc') return NS.pcExec(d, t);
+  return NS.iosExec(d, t);
+};
+
+NS.pingText = (d, ip, win) => {
+  const arpEmpty = !Object.keys(d.arp).length;
+  const r = NS.ping(d, ip); const trace = r.steps; let out = '';
+  const ms = () => { const k = Math.floor(Math.random() * 9); return k ? 'time=' + k + 'ms' : 'time<1ms'; };
+  if (win) {
+    out += '\nPinging ' + ip + ' with 32 bytes of data:\n\n';
+    let got = 0;
+    for (let k = 0; k < 4; k++) {
+      if (r.ok && !(arpEmpty && k === 0)) { got++; out += 'Reply from ' + ip + ': bytes=32 ' + ms() + ' TTL=' + r.ttl + '\n'; }
+      else if (!r.ok && !(r.fail.reason === 'arp' || r.fail.reason === 'ttl' || r.dir === 'reply' || r.fail.reason === 'off')) out += 'Reply from ' + (d.ifaces[0].ip || '0.0.0.0') + ': Destination host unreachable.\n';
+      else out += 'Request timed out.\n';
+    }
+    out += '\nPing statistics for ' + ip + ':\n    Packets: Sent = 4, Received = ' + got + ', Lost = ' + (4 - got) + ' (' + (100 - got * 25) + '% loss)';
+    if (got) out += ',\nApproximate round trip times in milli-seconds:\n    Minimum = 0ms, Maximum = 3ms, Average = 1ms';
+  } else {
+    out += 'Type escape sequence to abort.\nSending 5, 100-byte ICMP Echos to ' + ip + ', timeout is 2 seconds:\n';
+    if (r.ok) out += (arpEmpty ? '.!!!!' : '!!!!!') + '\nSuccess rate is ' + (arpEmpty ? 80 : 100) + ' percent (' + (arpEmpty ? 4 : 5) + '/5), round-trip min/avg/max = 0/1/3 ms';
+    else out += (r.fail.reason === 'no-route' ? 'U.U.U' : '.....') + '\nSuccess rate is 0 percent (0/5)';
+  }
+  return { out, trace, fail: r.ok ? null : r.fail, ok: r.ok, ping: true };
+};
+
+NS.traceText = (d, ip, win) => {
+  const f = NS.send(d, ip, 'Trace'); let out = (win ? '\nTracing route to ' + ip + ' over a maximum of 30 hops:\n\n' : 'Type escape sequence to abort.\nTracing the route to ' + ip + '\n\n');
+  const hops = f.steps.hops; let n = 0;
+  hops.forEach(h => { if (h.dev.type === 'switch') return; n++; out += '  ' + pad(n, 3) + (win ? ' <1 ms  <1 ms  <1 ms  ' : ' 0 msec 0 msec 0 msec  ') + h.ip + '\n'; });
+  if (!f.ok) { n++; out += '  ' + pad(n, 3) + ' *  *  *  ' + (win ? 'Request timed out.' : '') + '\n'; }
+  out += win ? '\nTrace complete.' : '';
+  return { out, trace: f.steps, fail: f.ok ? null : f, ok: f.ok, ping: true };
+};
+
+NS.pcExec = (d, t) => {
+  const c = t[0].toLowerCase(), i = d.ifaces[0];
+  if (c === 'help' || c === '?') return { out: 'الأوامر المتاحة:\n  ipconfig [/all]\n  ipset <ip> <mask> [gateway]   لضبط الـ IP\n  ping <ip>\n  tracert <ip>\n  arp -a\n  cls' };
+  if (c === 'cls') return { out: '', clear: true };
+  if (c === 'ipconfig') {
+    let o = '\nEthernet adapter ' + i.name + ':\n\n';
+    if (t[1] === '/all') o += '   Physical Address. . . . . : ' + i.mac + '\n';
+    o += '   Link Status . . . . . . . : ' + (NS.linkUp(i) ? 'Up' : 'Down (no cable)') + '\n';
+    o += '   IPv4 Address. . . . . . . : ' + (i.ip || '0.0.0.0') + '\n   Subnet Mask . . . . . . . : ' + (i.mask || '0.0.0.0') + '\n   Default Gateway . . . . . : ' + (d.gw || '0.0.0.0');
+    return { out: o };
+  }
+  if (c === 'ipset') {
+    if (NS.ip2n(t[1]) === null || NS.maskLen(t[2]) === null) return { out: 'الاستخدام: ipset <ip> <mask> [gateway]\nمثال: ipset 192.168.1.10 255.255.255.0 192.168.1.1', changed: false };
+    if (t[3] && NS.ip2n(t[3]) === null) return { out: 'Gateway غير صالح' };
+    i.ip = t[1]; i.mask = t[2]; d.gw = t[3] || ''; return { out: 'تم الضبط: ' + i.ip + ' / ' + i.mask + (d.gw ? ' gw ' + d.gw : ''), changed: true };
+  }
+  if (c === 'arp') { const k = Object.keys(d.arp); return { out: k.length ? '\nInternet Address      Physical Address\n' + k.map(x => pad(x, 22) + d.arp[x]).join('\n') : 'No ARP Entries Found.' }; }
+  if (c === 'ping' || c === 'tracert') {
+    if (NS.ip2n(t[1]) === null) return { out: 'الاستخدام: ' + c + ' <ip>' };
+    if (!i.ip) return { out: 'PC لا يملك IP. استخدم ipset أولاً.' };
+    return c === 'ping' ? NS.pingText(d, t[1], true) : NS.traceText(d, t[1], true);
+  }
+  return { out: "'" + t[0] + "' is not recognized as an internal or external command.\nاكتب help لعرض الأوامر." };
+};
+
+NS.showIfBrief = d => 'Interface              IP-Address      OK? Method Status                Protocol\n' + d.ifaces.map(i => {
+  const up = NS.linkUp(i); const st = i.shut ? 'administratively down' : (i.link ? 'up' : 'down');
+  return pad(i.name, 23) + pad(i.ip || 'unassigned', 16) + 'YES manual ' + pad(st, 22) + (up ? 'up' : 'down');
+}).join('\n');
+
+NS.showRoute = d => {
+  let o = 'Codes: C - connected, S - static\n\n'; const rows = [];
+  d.ifaces.forEach(i => { if (i.ip && !i.shut && NS.linkUp(i)) rows.push('C    ' + NS.n2ip(NS.net(i.ip, i.mask)) + '/' + NS.maskLen(i.mask) + ' is directly connected, ' + i.name); });
+  d.routes.forEach(r => rows.push('S    ' + r.net + '/' + NS.maskLen(r.mask) + ' [1/0] via ' + r.via));
+  return o + (rows.length ? rows.join('\n') : '(الجدول فاضي)');
+};
+
+NS.showRun = d => {
+  let o = 'hostname ' + (d.host || d.name) + '\n!\n';
+  d.ifaces.forEach(i => {
+    o += 'interface ' + i.name + '\n';
+    if (d.type === 'switch') { if (i.vlan !== 1) o += ' switchport access vlan ' + i.vlan + '\n'; }
+    else o += i.ip ? ' ip address ' + i.ip + ' ' + i.mask + '\n' : ' no ip address\n';
+    o += i.shut ? ' shutdown\n' : ' no shutdown\n'; o += '!\n';
+  });
+  d.routes.forEach(r => o += 'ip route ' + r.net + ' ' + r.mask + ' ' + r.via + '\n');
+  return o.trim();
+};
+
+NS.iosExec = (d, t) => {
+  const c = t[0].toLowerCase(), a = t[1] || '', mode = d.mode, bad = { out: '% Invalid input detected. اكتب ? للمساعدة' };
+  if (c === '?' || c === 'help') return { out: NS.iosHelp(d) };
+  if (mode === 'user' || mode === 'priv') {
+    if (mode === 'user' && pre(c, 'enable', 2)) { d.mode = 'priv'; return { out: '' }; }
+    if (mode === 'priv' && pre(c, 'disable', 4)) { d.mode = 'user'; return { out: '' }; }
+    if (mode === 'priv' && pre(c, 'configure', 4)) { if (!pre(a, 'terminal', 1)) return { out: '% Incomplete command. جرّب: configure terminal' }; d.mode = 'config'; return { out: 'Enter configuration commands, one per line.  End with CNTL/Z.' }; }
+    if (pre(c, 'exit', 2) || c === 'logout') { d.mode = 'user'; return { out: '' }; }
+    if (pre(c, 'ping', 2) || pre(c, 'traceroute', 5) || pre(c, 'trace', 5)) {
+      if (NS.ip2n(a) === null) return { out: '% الاستخدام: ' + c + ' <ip>' };
+      return pre(c, 'ping', 2) ? NS.pingText(d, a, false) : NS.traceText(d, a, false);
+    }
+    if (pre(c, 'show', 2) || (mode === 'priv' && c === 'sh')) {
+      const s = t.slice(1).join(' ').toLowerCase();
+      if (/^ip\s+int\w*\s+br\w*$/.test(s)) return { out: NS.showIfBrief(d) };
+      if (/^ip\s+ro\w*$/.test(s) && d.type === 'router') return { out: NS.showRoute(d) };
+      if (/^arp$/.test(s)) { const k = Object.keys(d.arp); return { out: 'Protocol  Address          Hardware Addr\n' + k.map(x => pad('Internet', 10) + pad(x, 17) + d.arp[x]).join('\n') }; }
+      if (/^mac\s+address-table$|^mac-address-table$/.test(s) && d.type === 'switch') { const k = Object.keys(d.mac); return { out: 'Vlan    Mac Address       Ports\n' + k.map(x => pad(d.mac[x].vlan, 8) + pad(x, 18) + d.mac[x].port).join('\n') }; }
+      if (/^vlan\s+br\w*$/.test(s) && d.type === 'switch') { const g = {}; d.ifaces.forEach(i => (g[i.vlan] = g[i.vlan] || []).push(i.name)); return { out: 'VLAN Ports\n' + Object.keys(g).map(v => pad(v, 5) + g[v].join(', ')).join('\n') }; }
+      if (/^run\w*(-config)?$/.test(s) && mode === 'priv') return { out: NS.showRun(d) };
+      return bad;
+    }
+    return bad;
+  }
+  if (pre(c, 'end', 3) || (c === 'exit' && mode === 'config')) { d.mode = c === 'end' ? 'priv' : 'priv'; d.ctx = null; return { out: '', changed: true }; }
+  if (mode === 'cfgif' && pre(c, 'exit', 2)) { d.mode = 'config'; d.ctx = null; return { out: '' }; }
+  if (mode === 'config') {
+    if (pre(c, 'hostname', 2)) { if (!a) return { out: '% Incomplete command.' }; d.host = a; return { out: '', changed: true }; }
+    if (pre(c, 'interface', 2)) { const i = NS.findIface(d, t.slice(1).join('')); if (!i) return { out: '% Invalid interface. مثال: ' + d.ifaces[0].name }; d.ctx = i.name; d.mode = 'cfgif'; return { out: '' }; }
+    if (pre(c, 'vlan', 2)) return { out: '' };
+    if (c === 'ip' && pre(a, 'route', 2) && d.type === 'router') {
+      if (NS.ip2n(t[2]) === null || NS.maskLen(t[3]) === null || NS.ip2n(t[4]) === null) return { out: '% الاستخدام: ip route <net> <mask> <next-hop>' };
+      d.routes.push({ net: NS.n2ip(NS.net(t[2], t[3])), mask: t[3], via: t[4] }); return { out: '', changed: true };
+    }
+    if (c === 'no' && a === 'ip' && pre(t[2], 'route', 2)) { d.routes = d.routes.filter(r => !(r.net === t[3] && r.mask === t[4])); return { out: '', changed: true }; }
+    return bad;
+  }
+  if (mode === 'cfgif') {
+    const i = NS.iface(d, d.ctx);
+    if (c === 'ip' && pre(a, 'address', 2) && d.type === 'router') {
+      if (NS.ip2n(t[2]) === null || NS.maskLen(t[3]) === null) return { out: '% Invalid IP address أو Mask' };
+      i.ip = t[2]; i.mask = t[3]; return { out: '', changed: true };
+    }
+    if (c === 'no' && a === 'ip') { i.ip = ''; i.mask = ''; return { out: '', changed: true }; }
+    if (pre(c, 'shutdown', 3)) { i.shut = true; return { out: '%LINK-5-CHANGED: Interface ' + i.name + ', changed state to administratively down\n%LINEPROTO-5-UPDOWN: Line protocol on Interface ' + i.name + ', changed state to down', changed: true }; }
+    if (c === 'no' && pre(a, 'shutdown', 3)) { i.shut = false; return { out: NS.linkUp(i) ? '%LINK-5-CHANGED: Interface ' + i.name + ', changed state to up\n%LINEPROTO-5-UPDOWN: Line protocol on Interface ' + i.name + ', changed state to up' : '', changed: true }; }
+    if (pre(c, 'switchport', 3) && d.type === 'switch') {
+      if (pre(a, 'mode', 1)) return { out: '' };
+      if (pre(a, 'access', 1) && pre(t[2], 'vlan', 1)) { const v = parseInt(t[3], 10); if (!(v >= 1 && v <= 4094)) return { out: '% VLAN غير صالح (1-4094)' }; i.vlan = v; return { out: '', changed: true }; }
+    }
+    if (pre(c, 'description', 2)) return { out: '' };
+    return bad;
+  }
+  return bad;
+};
+
+NS.iosHelp = d => {
+  const m = d.mode;
+  if (m === 'user') return 'enable | ping <ip> | traceroute <ip> | show ip interface brief | show ip route | show arp';
+  if (m === 'priv') return 'configure terminal | show running-config | show ip interface brief | show ip route | show arp' + (d.type === 'switch' ? ' | show mac address-table | show vlan brief' : '') + ' | ping | traceroute | disable';
+  if (m === 'config') return 'hostname <name> | interface <name> | ip route <net> <mask> <next-hop> | end';
+  return (d.type === 'router' ? 'ip address <ip> <mask> | ' : 'switchport access vlan <n> | ') + 'shutdown | no shutdown | exit | end';
+};
+/* ===== Ready-made scenarios ===== */
+NS.scenarios = {
+  lan: { name: 'شبكتان عبر راوتر', desc: 'PC0 و PC1 على شبكتين مختلفتين، والراوتر Router0 بينهم. كل شيء مضبوط. جرّب ping من PC0 إلى 192.168.2.10.', build() {
+    const r = NS.addDevice('router', 330, 110), s1 = NS.addDevice('switch', 170, 230), s2 = NS.addDevice('switch', 490, 230), a = NS.addDevice('pc', 100, 350), b = NS.addDevice('pc', 560, 350);
+    NS.connect(r, s1); NS.connect(r, s2); NS.connect(s1, a); NS.connect(s2, b);
+    NS.setIf(r.ifaces[0], '192.168.1.1', '255.255.255.0'); NS.setIf(r.ifaces[1], '192.168.2.1', '255.255.255.0');
+    NS.setIp(a, '192.168.1.10', '255.255.255.0', '192.168.1.1'); NS.setIp(b, '192.168.2.10', '255.255.255.0', '192.168.2.1'); } },
+  gw: { name: 'مشكلة: Gateway غلط', desc: 'PC0 عنده Gateway خاطئ (192.168.1.254). الـ ping للشبكة التانية هيفشل. اكتشف السبب من IP Configuration وصلّحه.', build() {
+    NS.scenarios.lan.build(); const pc = NS.state.devices.find(d => d.name === 'PC0'); pc.gw = '192.168.1.254'; } },
+  vlan: { name: 'مشكلة: VLAN غلط', desc: 'بورت PC0 على Switch0 في VLAN 20 بدل 1. الـ ARP هيفشل. استخدم show vlan brief على Switch0 وصلّح.', build() {
+    NS.scenarios.lan.build(); const sw = NS.state.devices.find(d => d.name === 'Switch0'); const p = sw.ifaces.find(i => i.link && NS.dev(i.link.dev).type === 'pc'); p.vlan = 20; } },
+  route: { name: 'مشكلة: Route ناقص', desc: 'ثلاث راوترات في سلسلة. Router1 لا يعرف الشبكتين 10.1.0.0 و 10.3.0.0. ضيف static route للاتنين على Router1 (ping من PC0 إلى 10.3.0.10).', build() {
+    const r1 = NS.addDevice('router', 90, 160), r2 = NS.addDevice('router', 300, 160), r3 = NS.addDevice('router', 510, 160), a = NS.addDevice('pc', 90, 320), b = NS.addDevice('pc', 510, 320);
+    NS.connect(r1, a); NS.connect(r1, r2); NS.connect(r2, r3); NS.connect(r3, b);
+    NS.setIf(r1.ifaces[0], '10.1.0.1', '255.255.255.0'); NS.setIf(r1.ifaces[1], '10.12.0.1', '255.255.255.0');
+    NS.setIf(r2.ifaces[0], '10.12.0.2', '255.255.255.0'); NS.setIf(r2.ifaces[1], '10.23.0.2', '255.255.255.0');
+    NS.setIf(r3.ifaces[0], '10.23.0.3', '255.255.255.0'); NS.setIf(r3.ifaces[1], '10.3.0.1', '255.255.255.0');
+    NS.setIp(a, '10.1.0.10', '255.255.255.0', '10.1.0.1'); NS.setIp(b, '10.3.0.10', '255.255.255.0', '10.3.0.1');
+    r1.routes.push({ net: '10.3.0.0', mask: '255.255.255.0', via: '10.12.0.2' }); r3.routes.push({ net: '10.1.0.0', mask: '255.255.255.0', via: '10.23.0.2' }); } }
+};
+NS.setIf = (i, ip, mask) => { i.ip = ip; i.mask = mask; i.shut = false; };
+NS.setIp = (d, ip, mask, gw) => { d.ifaces[0].ip = ip; d.ifaces[0].mask = mask; d.gw = gw || ''; };
+NS.loadScenario = k => { NS.fresh(); NS.scenarios[k].build(); };
+/* ===== UI 1: workspace canvas, tools, cabling ===== */
+const $ = s => document.querySelector(s);
+const svg = $('#cv'), world = $('#world'), gDev = $('#gDev'), gLinks = $('#gLinks'), gPkt = $('#gPkt'), gGrid = $('#gGrid');
+const SVGNS = 'http://www.w3.org/2000/svg';
+const view = { x: 0, y: 0, k: 1 };
+let tool = 'select', placing = null, cableType = 'auto', pendingCable = null, pduSrc = null, toastT = 0;
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const CAB_AR = { auto: 'Auto', straight: 'Copper Straight-Through', cross: 'Copper Cross-Over', fiber: 'Fiber' };
+
+function toast(msg, kind) { const t = $('#toast'); t.textContent = msg; t.className = 'toast show ' + (kind || ''); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), 3800); }
+function applyView() { world.setAttribute('transform', `translate(${view.x} ${view.y}) scale(${view.k})`); }
+function save() { try { localStorage.setItem('netlab-v2', NS.serialize()); } catch (e) { } }
+
+function initGrid() {
+  const defs = document.createElementNS(SVGNS, 'defs');
+  defs.innerHTML = '<linearGradient id="hg2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" style="stop-color:var(--accent)"/><stop offset="1" style="stop-color:var(--accent-2)"/></linearGradient><linearGradient id="sg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" style="stop-color:var(--accent);stop-opacity:.9"/><stop offset="1" style="stop-color:var(--accent-2);stop-opacity:.75"/></linearGradient><pattern id="gp" width="30" height="30" patternUnits="userSpaceOnUse"><circle cx="15" cy="15" r="1.1" class="grid-dot"/></pattern>';
+  svg.insertBefore(defs, world);
+  gGrid.innerHTML = '<rect x="-4000" y="-4000" width="8000" height="8000" fill="url(#gp)"/>';
+}
+
+/* device artwork, used on canvas, in the palette and in windows */
+function glyph(d) {
+  const m = d.model || d.type;
+  if (d.type === 'pc' && m === 'Laptop') return '<g class="d-shadow"><rect class="d-body" x="-21" y="-20" width="42" height="26" rx="4"/><rect x="-17" y="-16" width="34" height="18" rx="2" fill="url(#sg)"/><path class="d-body" d="M-27 6h54l-4 9h-46z"/></g>';
+  if (d.type === 'pc' && m === 'Server') return '<g class="d-shadow"><rect class="d-body" x="-14" y="-24" width="28" height="46" rx="4"/><path class="d-line" d="M-14 -9H14M-14 6H14"/><circle class="led" cx="-7" cy="-16" r="2"/><circle class="led" cx="-7" cy="-1" r="2"/><circle class="led off" cx="-7" cy="14" r="2"/><path class="d-line" d="M0 -16h8M0 -1h8"/></g>';
+  if (d.type === 'pc') return '<g class="d-shadow"><rect class="d-body" x="-22" y="-23" width="44" height="30" rx="5"/><rect x="-18" y="-19" width="36" height="22" rx="2.5" fill="url(#sg)"/><path class="d-body" d="M-5 7h10l2 9h-14z"/><rect class="d-body" x="-15" y="16" width="30" height="4" rx="2"/></g>';
+  if (d.type === 'switch') {
+    let p = ''; const n = d.ifaces.length || 8; for (let k = 0; k < n; k++) { const x = -25 + k * 6.9, i = d.ifaces[k]; p += `<rect class="d-line" fill="var(--work)" x="${x}" y="1" width="4.6" height="7" rx="1"/><circle class="led ${i && NS.linkUp(i) ? '' : 'off'}" cx="${x + 2.3}" cy="-6" r="1.7"/>`; }
+    return '<g class="d-shadow"><rect class="d-body" x="-30" y="-14" width="60" height="28" rx="6"/>' + p + '</g>';
+  }
+  return '<g class="d-shadow"><circle class="d-body" r="25"/><circle r="18" fill="url(#hg2)"/><path d="M-9 -3h18M5 -8l5 5-5 5M9 5h-18M-5 0l-5 5 5 5" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></g>';
+}
+function iconSvg(model) { const t = NS.MODELS[model] ? NS.MODELS[model].type : model; return `<svg viewBox="-34 -30 68 56" aria-hidden="true">${glyph({ type: t, model, ifaces: [] })}</svg>`; }
+function devSub(d) { const i = d.type === 'pc' ? d.ifaces[0] : d.ifaces.find(x => x.ip); return i && i.ip ? i.ip : ''; }
+
+function render() {
+  gLinks.innerHTML = ''; gDev.innerHTML = '';
+  NS.state.devices.forEach(d => d.ifaces.forEach(i => {
+    if (!i.link) return; const p = NS.peerIf(i); if (!p || d.id > p.dev.id) return;
+    const up = NS.linkUp(i), x1 = d.x, y1 = d.y, x2 = p.dev.x, y2 = p.dev.y, dx = x2 - x1, dy = y2 - y1, L = Math.hypot(dx, dy) || 1;
+    const at = (dist, off) => [x1 + dx / L * dist - dy / L * off, y1 + dy / L * dist + dx / L * off];
+    const k = Math.min(1, L / 190), dd = 38 * k, ld = 84 * k;
+    const e1 = at(dd, 0), e2 = at(L - dd, 0), l1 = at(ld, -10), l2 = at(L - ld, -10);
+    const g = document.createElementNS(SVGNS, 'g'); g.dataset.link = d.id + '|' + i.name;
+    const c = i.link.cable || 'straight';
+    g.innerHTML = `<line class="cab ${c}" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/><line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="transparent" stroke-width="24"/><circle class="lend ${up ? 'up' : 'down'}" cx="${e1[0]}" cy="${e1[1]}" r="4.5"/><circle class="lend ${up ? 'up' : 'down'}" cx="${e2[0]}" cy="${e2[1]}" r="4.5"/><text class="port" x="${l1[0]}" y="${l1[1]}">${NS.short(i.name)}</text><text class="port" x="${l2[0]}" y="${l2[1]}">${NS.short(p.iface.name)}</text>`;
+    gLinks.appendChild(g);
+  }));
+  NS.state.devices.forEach(d => {
+    const g = document.createElementNS(SVGNS, 'g'); g.dataset.id = d.id; g.setAttribute('transform', `translate(${d.x} ${d.y})`);
+    const sel = (pendingCable && pendingCable.dev === d.id) || pduSrc === d.id;
+    g.setAttribute('class', (sel ? 'sel ' : '') + (d.off ? 'off-dev' : '')); g.style.cursor = 'pointer';
+    g.innerHTML = '<circle class="selring" r="38"/>' + glyph(d) + `<rect x="-34" y="-30" width="68" height="76" fill="transparent"/><text class="d-label" y="34">${esc(d.name)}</text><text class="d-sub" y="46">${esc(devSub(d))}</text>`;
+    gDev.appendChild(g);
+  });
+  updateHint(); save();
+  if (typeof refreshPanelIfOpen === 'function') refreshPanelIfOpen();
+}
+
+function updateHint() {
+  const h = $('#hint'); let t = '';
+  if (!NS.state.devices.length && tool !== 'place') t = 'مساحة العمل فاضية. اختر جهاز من اللوحة تحت ثم اضغط هنا لوضعه، أو افتح سيناريو جاهز';
+  else if (tool === 'place') t = 'اضغط في أي مكان لوضع ' + (placing ? placing.model : 'الجهاز');
+  else if (tool === 'cable') t = pendingCable ? 'اختر الجهاز التاني (' + CAB_AR[cableType] + ')' : 'اختر الجهاز الأول للتوصيل (' + CAB_AR[cableType] + ')';
+  else if (tool === 'pdu') t = pduSrc ? 'اختر جهاز الوجهة' : 'اختر جهاز المصدر للحزمة';
+  else if (tool === 'del') t = 'اضغط جهاز أو كابل لحذفه';
+  h.textContent = t; h.hidden = !t;
+  $('#toolLbl').textContent = { select: 'Select', del: 'Delete', pdu: 'Simple PDU', place: 'Place', cable: 'Connections' }[tool];
+}
+
+function fit() {
+  const W = svg.clientWidth, H = svg.clientHeight, ds = NS.state.devices; if (!W || !H) return;
+  if (!ds.length) { view.x = 0; view.y = 0; view.k = 1; return applyView(); }
+  const xs = ds.map(d => d.x), ys = ds.map(d => d.y), pad = 60;
+  const x0 = Math.min(...xs) - pad, x1 = Math.max(...xs) + pad, y0 = Math.min(...ys) - pad, y1 = Math.max(...ys) + pad + 22;
+  view.k = Math.min(1.3, W / (x1 - x0), H / (y1 - y0));
+  view.x = W / 2 - (x0 + x1) / 2 * view.k; view.y = H / 2 - (y0 + y1) / 2 * view.k; applyView();
+}
+function toWorld(e) { const r = svg.getBoundingClientRect(); return [(e.clientX - r.left - view.x) / view.k, (e.clientY - r.top - view.y) / view.k]; }
+
+function setTool(t) {
+  tool = t; pendingCable = null; pduSrc = null; if (t !== 'place') placing = null;
+  document.querySelectorAll('[data-tool]').forEach(b => b.setAttribute('aria-pressed', b.dataset.tool === t));
+  if (typeof refreshPalette === 'function') refreshPalette();
+  render();
+}
+
+/* pointer handling: drag devices, pan, pinch zoom, taps */
+const ptrs = new Map(); let drag = null, pinch = null;
+svg.addEventListener('pointerdown', e => {
+  svg.setPointerCapture(e.pointerId); ptrs.set(e.pointerId, [e.clientX, e.clientY]);
+  if (ptrs.size === 2) { const [a, b] = [...ptrs.values()]; const r = svg.getBoundingClientRect(); pinch = { d0: Math.hypot(a[0] - b[0], a[1] - b[1]), k0: view.k, mx: (a[0] + b[0]) / 2 - r.left, my: (a[1] + b[1]) / 2 - r.top, vx: view.x, vy: view.y }; drag = null; return; }
+  const dv = e.target.closest('[data-id]'), lk = e.target.closest('[data-link]');
+  if (dv) { const d = NS.dev(dv.dataset.id), w = toWorld(e); drag = { kind: 'dev', d, ox: w[0] - d.x, oy: w[1] - d.y, sx: e.clientX, sy: e.clientY, vx: view.x, vy: view.y, moved: false }; }
+  else if (lk) drag = { kind: 'link', key: lk.dataset.link, sx: e.clientX, sy: e.clientY, moved: false };
+  else drag = { kind: 'pan', sx: e.clientX, sy: e.clientY, vx: view.x, vy: view.y, moved: false, w: toWorld(e) };
+});
+svg.addEventListener('pointermove', e => {
+  if (ptrs.has(e.pointerId)) ptrs.set(e.pointerId, [e.clientX, e.clientY]);
+  if (pinch && ptrs.size >= 2) { const [a, b] = [...ptrs.values()]; const k = Math.max(.3, Math.min(2.6, pinch.k0 * Math.hypot(a[0] - b[0], a[1] - b[1]) / pinch.d0)); const wx = (pinch.mx - pinch.vx) / pinch.k0, wy = (pinch.my - pinch.vy) / pinch.k0; view.k = k; view.x = pinch.mx - wx * k; view.y = pinch.my - wy * k; applyView(); return; }
+  if (!drag) return;
+  if (Math.hypot(e.clientX - drag.sx, e.clientY - drag.sy) > 7) drag.moved = true;
+  if (!drag.moved) return;
+  if (drag.kind === 'dev' && tool === 'select') { const w = toWorld(e); drag.d.x = Math.round(w[0] - drag.ox); drag.d.y = Math.round(w[1] - drag.oy); render(); }
+  else if (drag.kind === 'pan' || (drag.kind === 'dev' && tool !== 'select')) { view.x = drag.vx + e.clientX - drag.sx; view.y = drag.vy + e.clientY - drag.sy; applyView(); }
+});
+const endPtr = e => { ptrs.delete(e.pointerId); if (ptrs.size < 2) pinch = null; };
+svg.addEventListener('pointerup', e => {
+  endPtr(e); const dr = drag; drag = null; if (!dr || dr.moved) return;
+  if (dr.kind === 'dev') tapDevice(dr.d);
+  else if (dr.kind === 'link' && tool === 'del') { const [id, name] = dr.key.split('|'); const d = NS.dev(id); NS.disconnect(NS.iface(d, name)); render(); toast('تم فصل الكابل'); }
+  else if (dr.kind === 'pan' && tool === 'place' && placing) placeAt(dr.w);
+});
+svg.addEventListener('pointercancel', e => { endPtr(e); drag = null; });
+svg.addEventListener('wheel', e => { e.preventDefault(); const r = svg.getBoundingClientRect(), mx = e.clientX - r.left, my = e.clientY - r.top, k = Math.max(.3, Math.min(2.6, view.k * (e.deltaY < 0 ? 1.12 : .89))); const wx = (mx - view.x) / view.k, wy = (my - view.y) / view.k; view.k = k; view.x = mx - wx * k; view.y = my - wy * k; applyView(); }, { passive: false });
+
+function placeAt(w) {
+  const m = NS.MODELS[placing.model], d = NS.addDevice(m.type, Math.round(w[0]), Math.round(w[1]), placing.model);
+  toast(d.name + ' تمت إضافته. اضغط عليه لفتح نافذته', 'good'); setTool('select');
+}
+
+function choosePort(dev, cb, title) {
+  $('#portTitle').textContent = title || ('اختر بورت على ' + dev.name);
+  const box = $('#portOpts'); box.innerHTML = '';
+  dev.ifaces.forEach(i => {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'btn opt'; b.disabled = !!i.link;
+    b.innerHTML = '<span>' + esc(i.name) + '</span><span>' + (i.link ? 'مستخدم' : 'فاضي') + '</span>';
+    b.onclick = () => { $('#dlgPort').close(); cb(i.name); }; box.appendChild(b);
+  });
+  $('#dlgPort').showModal();
+}
+
+function doConnect(a, pa, b, pb) {
+  const err = NS.connect(a, b, cableType, pa, pb); pendingCable = null; render();
+  if (err) return toast(err, 'bad');
+  const ia = pa ? NS.iface(a, pa) : null; const link = (ia || a.ifaces.find(i => i.link && i.link.dev === b.id)).link;
+  toast('تم توصيل ' + a.name + ' بـ ' + b.name + ' (' + CAB_AR[link.cable] + ')', 'good');
+}
+
+function tapDevice(d) {
+  if (tool === 'select') return openWin(d.id);
+  if (tool === 'del') { NS.removeDevice(d); render(); return toast('تم حذف ' + d.name); }
+  if (tool === 'cable') {
+    if (!pendingCable) {
+      if (cableType === 'auto') { pendingCable = { dev: d.id, port: null }; return render(); }
+      return choosePort(d, name => { pendingCable = { dev: d.id, port: name }; render(); });
+    }
+    const a = NS.dev(pendingCable.dev), pa = pendingCable.port;
+    if (a === d) { pendingCable = null; return render(); }
+    if (cableType === 'auto') return doConnect(a, null, d, null);
+    return choosePort(d, name => doConnect(a, pa, d, name));
+  }
+  if (tool === 'pdu') {
+    if (!pduSrc) { if (!d.ifaces.some(i => i.ip) || d.type === 'switch') { return toast(d.type === 'switch' ? 'السويتش لا يرسل حزم IP. اختر PC أو راوتر' : d.name + ' لا يملك IP. اضبطه أولاً', 'bad'); } pduSrc = d.id; return render(); }
+    const s = NS.dev(pduSrc); pduSrc = null; render();
+    if (s === d) return;
+    return createPdu(s, d);
+  }
+}
+/* ===== UI 2: device window (Physical / Config / CLI / Desktop) ===== */
+const logs = {}, hist = {}; let winDev = null, curTab = 'cfg';
+const KIND_AR = { Router: 'Router', Switch: 'Switch', PC: 'PC', Laptop: 'Laptop', Server: 'Server' };
+
+function tabsFor(d) { return d.type === 'pc' ? [['phys', 'Physical'], ['cfg', 'Config'], ['desk', 'Desktop']] : [['phys', 'Physical'], ['cfg', 'Config'], ['cli', 'CLI']]; }
+function openWin(id, tab) {
+  const d = NS.dev(id); if (!d) return; winDev = id;
+  $('#win').hidden = false; document.body.style.overflow = 'hidden';
+  const t = tab || (d.type === 'pc' ? 'cfg' : 'cfg'); buildTabs(d); fillWin(d); showTab(t);
+}
+function closeWin() { winDev = null; $('#win').hidden = true; render(); requestAnimationFrame(fit); }
+function buildTabs(d) {
+  const w = $('#wTabs'); w.innerHTML = '';
+  tabsFor(d).forEach(([k, l]) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'wtab'; b.setAttribute('role', 'tab'); b.dataset.tab = k; b.textContent = l; b.onclick = () => showTab(k); w.appendChild(b); });
+}
+function fillWin(d) {
+  $('#wTitle').innerHTML = esc(d.name) + '<small>' + KIND_AR[d.model || d.type] + '</small>';
+  renderPhys(d); renderCfg(d); renderCli(d); if (d.type === 'pc') { renderDesk(d); renderIpc(d); }
+}
+function showTab(t) {
+  const d = NS.dev(winDev); if (!d) return;
+  const ok = tabsFor(d).map(x => x[0]).concat(d.type === 'pc' ? ['cli', 'ipc'] : []); if (!ok.includes(t)) t = 'cfg';
+  curTab = t; const hl = (t === 'cli' || t === 'ipc') && d.type === 'pc' ? 'desk' : t;
+  document.querySelectorAll('.wtab').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === hl));
+  [['phys', 'pPhys'], ['cfg', 'pCfg'], ['cli', 'pCli'], ['desk', 'pDesk'], ['ipc', 'pIpc']].forEach(([k, id]) => { $('#' + id).hidden = k !== t; });
+  $('#cliBar').hidden = d.type !== 'pc';
+  if (t === 'cli') { const o = $('#out'); o.scrollTop = o.scrollHeight; setTimeout(() => { try { $('#cmdIn').focus({ preventScroll: true }); } catch (e) { } }, 50); }
+}
+function refreshPanelIfOpen() { const d = NS.dev(winDev); if (!d || $('#win').hidden) return; renderPhys(d); if (!inputFocused()) { renderCfg(d); if (d.type === 'pc') renderIpc(d); } }
+function inputFocused() { const a = document.activeElement; return a && a.matches && a.matches('#win input[type=text]') && a.id !== 'cmdIn'; }
+
+/* ---------- Physical ---------- */
+function renderPhys(d) {
+  let h = `<div class="pwr"><button class="pwrbtn" type="button" id="pwrBtn" aria-pressed="${!d.off}" aria-label="Power"><svg viewBox="0 0 24 24"><path d="M12 3v8M6.3 6.8a8 8 0 1011.4 0"/></svg></button><div><b>Power ${d.off ? 'OFF' : 'ON'}</b><p class="msg">اضغط الزرار لتشغيل أو إطفاء الجهاز. الجهاز المطفأ لا يمرر أي حزم.</p></div></div>`;
+  h += '<div class="chassis"><div class="ports">';
+  d.ifaces.forEach(i => { const up = NS.linkUp(i), p = NS.peerIf(i); h += `<div class="ptile"><span class="l"><span class="dot ${up ? 'up' : ''}"></span>${esc(NS.short(i.name))}</span><i></i><span style="color:var(--muted)">${p ? esc(p.dev.name) : '—'}</span></div>`; });
+  h += '</div></div><p class="msg" style="margin-top:10px">النقطة الخضراء = الرابط شغال، الحمراء = واقف (كابل غلط أو بورت مقفول أو طرف مطفأ).</p>';
+  $('#pPhys').innerHTML = h;
+  $('#pwrBtn').onclick = () => { d.off = !d.off; render(); fillWin(d); toast(d.name + (d.off ? ' اتطفى' : ' اشتغل'), d.off ? '' : 'good'); };
+}
+
+/* ---------- Config (GUI) ---------- */
+function defMask(ip) { const a = parseInt(ip, 10); return a < 128 ? '255.0.0.0' : a < 192 ? '255.255.0.0' : '255.255.255.0'; }
+function setIface(d, i, f, v) {
+  v = String(v).trim();
+  if (f === 'on') { i.shut = !v; return null; }
+  if (f === 'vlan') { const n = parseInt(v, 10); if (!(n >= 1 && n <= 4094)) return 'VLAN لازم يكون من 1 إلى 4094'; i.vlan = n; return null; }
+  if (f === 'ip') { if (v === '') { i.ip = ''; i.mask = ''; return null; } if (NS.ip2n(v) === null) return 'IP غير صالح'; i.ip = v; if (!i.mask || NS.maskLen(i.mask) === null) i.mask = defMask(v); return null; }
+  if (f === 'mask') { if (v === '') { i.mask = ''; return null; } if (NS.maskLen(v) === null) return 'Subnet Mask غير صالح'; i.mask = v; return null; }
+  return null;
+}
+function renderCfg(d) {
+  const pane = $('#pCfg'), opened = [...pane.querySelectorAll('details')].map(x => x.open);
+  let h = `<details class="sec" open><summary>GLOBAL · Settings</summary><div class="in"><div class="fld"><label>Display Name<input type="text" data-g="name" value="${esc(d.name)}"></label>`;
+  if (d.type !== 'pc') h += `<label>Hostname<input type="text" data-g="host" value="${esc(d.host || d.name)}"></label>`;
+  else h += `<label>Default Gateway<input type="text" data-g="gw" value="${esc(d.gw)}" inputmode="decimal" placeholder="0.0.0.0"></label>`;
+  h += '</div></div></details>';
+  if (d.type === 'router') {
+    h += '<details class="sec"><summary>ROUTING · Static</summary><div class="in">';
+    h += d.routes.length ? d.routes.map((r, k) => `<div class="rt"><span>${r.net}/${NS.maskLen(r.mask)} via ${r.via}</span><button class="pbtn" type="button" data-rm="${k}">حذف</button></div>`).join('') : '<p class="msg">مفيش static routes.</p>';
+    h += '<div class="fld three"><label>Network<input type="text" id="rtNet" inputmode="decimal" placeholder="10.3.0.0"></label><label>Mask<input type="text" id="rtMask" inputmode="decimal" placeholder="255.255.255.0"></label><label>Next Hop<input type="text" id="rtVia" inputmode="decimal" placeholder="10.23.0.3"></label></div><button class="btn primary" type="button" id="rtAdd" style="justify-content:center">Add</button></div></details>';
+  }
+  d.ifaces.forEach(i => {
+    const up = NS.linkUp(i), p = NS.peerIf(i);
+    h += `<details class="sec"><summary><span class="dot ${up ? 'up' : ''}"></span>INTERFACE · ${esc(i.name)}</summary><div class="in"><label class="chk"><input type="checkbox" data-if="${esc(i.name)}" data-f="on" ${i.shut ? '' : 'checked'}> Port Status: On</label>`;
+    if (d.type === 'switch') h += `<div class="fld one"><label>Access VLAN<input type="text" data-if="${esc(i.name)}" data-f="vlan" value="${i.vlan}" inputmode="numeric"></label></div>`;
+    else h += `<div class="fld"><label>IP Address<input type="text" data-if="${esc(i.name)}" data-f="ip" value="${esc(i.ip)}" inputmode="decimal" placeholder="غير محدد"></label><label>Subnet Mask<input type="text" data-if="${esc(i.name)}" data-f="mask" value="${esc(i.mask)}" inputmode="decimal" placeholder="255.255.255.0"></label></div>`;
+    h += `<p class="msg" dir="ltr" style="text-align:left">MAC: ${i.mac} · ${p ? 'Connected to ' + esc(p.dev.name) + ' (' + esc(NS.short(p.iface.name)) + ') · ' + CAB_AR[i.link.cable || 'straight'] : 'Not connected'}</p></div></details>`;
+  });
+  pane.innerHTML = h; pane.querySelectorAll('details').forEach((x, k) => { if (opened[k] !== undefined) x.open = opened[k]; });
+}
+$('#pCfg').addEventListener('change', e => {
+  const d = NS.dev(winDev), t = e.target; if (!d) return; let err = null;
+  if (t.dataset.g) {
+    const v = t.value.trim();
+    if (t.dataset.g === 'name') { if (v) d.name = v; }
+    else if (t.dataset.g === 'host') { if (v) d.host = v; }
+    else if (t.dataset.g === 'gw') { if (v === '' || NS.ip2n(v) !== null) d.gw = v; else err = 'Gateway غير صالح'; }
+  } else if (t.dataset.if) err = setIface(d, NS.iface(d, t.dataset.if), t.dataset.f, t.type === 'checkbox' ? t.checked : t.value);
+  t.classList.toggle('inv', !!err); if (err) return toast(err, 'bad');
+  $('#wTitle').innerHTML = esc(d.name) + '<small>' + KIND_AR[d.model || d.type] + '</small>'; render(); renderCfg(d); if (d.type === 'pc') renderIpc(d);
+});
+$('#pCfg').addEventListener('click', e => {
+  const d = NS.dev(winDev); if (!d) return; const t = e.target.closest('button'); if (!t) return;
+  if (t.dataset.rm !== undefined) { d.routes.splice(+t.dataset.rm, 1); render(); renderCfg(d); $('#pCfg').querySelectorAll('details')[1].open = true; }
+  if (t.id === 'rtAdd') {
+    const n = $('#rtNet').value.trim(), m = $('#rtMask').value.trim(), v = $('#rtVia').value.trim();
+    if (NS.ip2n(n) === null || NS.maskLen(m) === null || NS.ip2n(v) === null) return toast('أدخل Network و Mask و Next Hop صحيحين', 'bad');
+    d.routes.push({ net: NS.n2ip(NS.net(n, m)), mask: m, via: v }); render(); renderCfg(d); $('#pCfg').querySelectorAll('details')[1].open = true; toast('تمت إضافة الـ route', 'good');
+  }
+});
+
+/* ---------- Desktop (PC) ---------- */
+function renderDesk(d) {
+  $('#pDesk').innerHTML = `<div class="desk"><button class="app" type="button" data-app="ipc"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4M7 9h4M7 12h7"/></svg>IP Configuration</button><button class="app" type="button" data-app="cli"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 10l3 2-3 2M12 15h5"/></svg>Command Prompt</button></div>`;
+  $('#pDesk').querySelectorAll('[data-app]').forEach(b => b.onclick = () => showTab(b.dataset.app));
+}
+function renderIpc(d) {
+  const i = d.ifaces[0], up = NS.linkUp(i);
+  $('#pIpc').innerHTML = `<div class="subbar" style="margin:-12px -12px 12px"><button class="pbtn" type="button" id="ipcBack">رجوع إلى Desktop</button><span>IP Configuration</span></div><p class="msg" style="margin-bottom:10px"><span class="dot ${up ? 'up' : ''}"></span> ${esc(i.name)} · ${up ? 'Link Up' : 'Link Down'}</p><div class="fld one"><label class="chk"><input type="radio" disabled> DHCP (غير مدعوم في النسخة دي)</label><label class="chk"><input type="radio" checked disabled> Static</label><label>IPv4 Address<input type="text" data-if="${esc(i.name)}" data-f="ip" value="${esc(i.ip)}" inputmode="decimal" placeholder="192.168.1.10"></label><label>Subnet Mask<input type="text" data-if="${esc(i.name)}" data-f="mask" value="${esc(i.mask)}" inputmode="decimal" placeholder="255.255.255.0"></label><label>Default Gateway<input type="text" data-g="gw" value="${esc(d.gw)}" inputmode="decimal" placeholder="192.168.1.1"></label></div>`;
+  $('#ipcBack').onclick = () => showTab('desk');
+}
+$('#pIpc').addEventListener('change', e => {
+  const d = NS.dev(winDev), t = e.target; if (!d) return; let err = null;
+  if (t.dataset.g === 'gw') { const v = t.value.trim(); if (v === '' || NS.ip2n(v) !== null) d.gw = v; else err = 'Gateway غير صالح'; }
+  else if (t.dataset.if) err = setIface(d, NS.iface(d, t.dataset.if), t.dataset.f, t.value);
+  t.classList.toggle('inv', !!err); if (err) return toast(err, 'bad'); render(); renderIpc(d); renderCfg(d);
+});
+$('#cliBack').onclick = () => showTab('desk');
+
+/* ---------- CLI ---------- */
+function print(id, t, c) { (logs[id] = logs[id] || []).push({ t, c }); }
+function renderCli(d) {
+  if (!logs[d.id]) print(d.id, d.type === 'pc' ? 'Netlab PC Command Line 1.0\nاكتب help لعرض الأوامر.' : (d.model === 'Router' ? 'Router con0 is now available\n\nPress RETURN to get started!' : 'Switch con0 is now available\n\nPress RETURN to get started!') + '\nاكتب ? للمساعدة.', 't-dim');
+  const o = $('#out'); o.innerHTML = '';
+  logs[d.id].forEach(l => { const s = document.createElement('div'); s.textContent = l.t; if (l.c) s.className = l.c; o.appendChild(s); });
+  o.scrollTop = o.scrollHeight; $('#prompt').textContent = NS.prompt(d); renderChips(d);
+}
+function renderChips(d) {
+  const r = d.type === 'router', f = r ? 'gigabitethernet0/0' : 'fastethernet0/1'; let c;
+  if (d.type === 'pc') c = ['ipconfig /all', 'ping ', 'tracert ', 'arp -a', 'help'];
+  else if (d.mode === 'user') c = ['enable', 'show ip interface brief', 'ping ', '?'];
+  else if (d.mode === 'priv') c = ['configure terminal', 'show ip interface brief', 'show running-config', r ? 'show ip route' : 'show mac address-table', r ? 'show arp' : 'show vlan brief', 'ping ', 'traceroute ', 'disable'];
+  else if (d.mode === 'config') c = ['interface ' + f, r ? 'ip route ' : 'hostname ', 'hostname ', 'end'];
+  else c = r ? ['ip address ', 'no shutdown', 'shutdown', 'exit', 'end'] : ['switchport access vlan ', 'no shutdown', 'shutdown', 'exit', 'end'];
+  $('#chips').innerHTML = '';
+  c.forEach(x => { const b = document.createElement('button'); b.type = 'button'; b.className = 'chip'; b.textContent = x.trim(); b.onclick = () => { const i = $('#cmdIn'); i.value = x; i.focus(); if (!/\s$/.test(x)) $('#cmdForm').requestSubmit(); }; $('#chips').appendChild(b); });
+}
+$('#cmdForm').addEventListener('submit', e => {
+  e.preventDefault(); const d = NS.dev(winDev); if (!d) return;
+  const inp = $('#cmdIn'), line = inp.value; inp.value = '';
+  print(d.id, NS.prompt(d) + ' ' + line, '');
+  if (line.trim()) { (hist[d.id] = hist[d.id] || []).push(line); hist[d.id].hp = hist[d.id].length; }
+  const r = NS.exec(d, line);
+  if (r.clear) logs[d.id] = [];
+  if (r.out) print(d.id, r.out, /^%[A-Z ]*Invalid|^% Inc|not recognized|الاستخدام|غير صالح/.test(r.out) ? 't-err' : '');
+  if (r.ping && r.trace) { const q = onPingResult(d, r); if (q) print(d.id, '[Simulation Mode] الحزم اتلتقطت. أغلق النافذة واضغط Capture / Forward أو Play.', 't-dim'); }
+  if (r.changed) { render(); $('#wTitle').innerHTML = esc(d.name) + '<small>' + KIND_AR[d.model || d.type] + '</small>'; renderCfg(d); if (d.type === 'pc') renderIpc(d); }
+  renderCli(d);
+});
+$('#cmdIn').addEventListener('keydown', e => {
+  const d = NS.dev(winDev), h = d && hist[d.id]; if (!h || !h.length || (e.key !== 'ArrowUp' && e.key !== 'ArrowDown')) return;
+  e.preventDefault(); h.hp = Math.max(0, Math.min(h.length, h.hp + (e.key === 'ArrowUp' ? -1 : 1))); e.target.value = h[h.hp] || '';
+});
+$('#wClose').onclick = closeWin;
+$('#win').addEventListener('pointerdown', e => { if (e.target.id === 'win' && window.innerWidth > 480) closeWin(); });
+addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#win').hidden && !document.querySelector('dialog[open]')) closeWin(); });
+/* ===== UI 3: palette, Realtime / Simulation, PDU list, event list, dialogs, boot ===== */
+let mode = 'rt', cat = 'net', pdus = [], pduNum = 0, simQ = [], simRows = [], simT = 0, simBusy = false, simPlay = false, simTok = 0, simTimer = 0;
+
+/* ---------- palette ---------- */
+const cabIcon = c => `<svg viewBox="-34 -30 68 56" aria-hidden="true">` + ({
+  auto: '<path d="M6 -22L-12 4h12l-4 20L16 -6H4z" fill="var(--warn)" stroke="var(--ink)" stroke-width="1.4" stroke-linejoin="round"/>',
+  straight: '<path d="M-24 14L24 -14" stroke="var(--ink)" stroke-width="3" stroke-linecap="round"/>',
+  cross: '<path d="M-24 14L24 -14" stroke="var(--ink)" stroke-width="3" stroke-linecap="round" stroke-dasharray="7 5"/>',
+  fiber: '<path d="M-24 14L24 -14" stroke="var(--warn)" stroke-width="3" stroke-linecap="round"/>'
+})[c] + '</svg>';
+const CATS = {
+  net: { title: 'Network Devices', items: [{ model: 'Router', label: 'Router', desc: 'Router: 3 × GigabitEthernet. بورتاته بتبدأ مقفولة (shutdown).' }, { model: 'Switch', label: 'Switch', desc: 'Switch Layer 2: 8 × FastEthernet مع دعم VLAN.' }] },
+  end: { title: 'End Devices', items: [{ model: 'PC', label: 'PC', desc: 'PC: FastEthernet0 مع Desktop و Command Prompt.' }, { model: 'Laptop', label: 'Laptop', desc: 'Laptop: نفس إمكانيات الـ PC.' }, { model: 'Server', label: 'Server', desc: 'Server: نفس إمكانيات الـ PC.' }] },
+  con: { title: 'Connections', items: [{ cable: 'auto', label: 'Auto', desc: 'Automatically Choose Connection Type: يختار الكابل الصح وأول بورت فاضي.' }, { cable: 'straight', label: 'Straight', desc: 'Copper Straight-Through: بين أجهزة مختلفة النوع (PC ↔ Switch، Router ↔ Switch).' }, { cable: 'cross', label: 'Cross-Over', desc: 'Copper Cross-Over: بين أجهزة من نفس النوع (Switch ↔ Switch، PC ↔ Router).' }, { cable: 'fiber', label: 'Fiber', desc: 'Fiber: كابل ألياف ضوئية (برتقالي).' }] }
+};
+function refreshPalette() {
+  document.querySelectorAll('.pcat').forEach(b => b.setAttribute('aria-selected', b.dataset.cat === cat));
+  const box = $('#pItems'); box.innerHTML = ''; let nm = CATS[cat].title;
+  CATS[cat].items.forEach(it => {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'pit';
+    const on = it.model ? (tool === 'place' && placing && placing.model === it.model) : (tool === 'cable' && cableType === it.cable);
+    b.setAttribute('aria-pressed', on); b.innerHTML = (it.model ? iconSvg(it.model) : cabIcon(it.cable)) + '<span>' + it.label + '</span>';
+    if (on) nm = it.desc;
+    b.onclick = () => {
+      if (on) return setTool('select');
+      if (it.model) { setTool('place'); placing = { model: it.model }; updateHint(); }
+      else { cableType = it.cable; setTool('cable'); }
+      refreshPalette();
+    };
+    box.appendChild(b);
+  });
+  $('#pName').textContent = nm;
+}
+document.querySelectorAll('.pcat').forEach(b => b.onclick = () => { cat = b.dataset.cat; refreshPalette(); });
+document.querySelectorAll('[data-tool]').forEach(b => b.onclick = () => setTool(tool === b.dataset.tool && b.dataset.tool !== 'select' ? 'select' : b.dataset.tool));
+$('#bFit').onclick = fit;
+let clearT = 0;
+$('#bClear').onclick = () => { if (Date.now() - clearT < 3000) { clearT = 0; return loadAndShow(() => NS.fresh()); } clearT = Date.now(); toast('اضغط تاني خلال 3 ثواني لمسح كل الشبكة'); };
+
+/* ---------- mode switch ---------- */
+function setMode(m) {
+  mode = m; stopPlay(); simTok++; gPkt.innerHTML = '';
+  document.querySelectorAll('[data-mode]').forEach(b => b.setAttribute('aria-pressed', b.dataset.mode === m));
+  renderPanel(); requestAnimationFrame(fit);
+  toast(m === 'sim' ? 'Simulation Mode: الحزم هتتلتقط في Event List' : 'Realtime Mode', '');
+}
+document.querySelectorAll('[data-mode]').forEach(b => b.onclick = () => setMode(b.dataset.mode));
+
+/* ---------- panel ---------- */
+const stLabel = { none: ['—', ''], ok: ['Successful', 'st-ok'], fail: ['Failed', 'st-no'], run: ['In progress', 'st-run'] };
+function renderPanel() {
+  const H = $('#panelH'), B = $('#panelB');
+  if (mode === 'rt') {
+    H.innerHTML = '<b>Scenario 0</b><span class="sub">PDU List</span><button class="pbtn" type="button" id="pNew">New</button><button class="pbtn" type="button" id="pDel"' + (pdus.length ? '' : ' disabled') + '>Delete</button>';
+    let t = '<table class="tbl"><thead><tr><th>Status</th><th>Source</th><th>Destination</th><th>Type</th><th>Num</th><th></th></tr></thead><tbody>';
+    t += pdus.length ? pdus.map(p => { const s = stLabel[p.status], a = NS.dev(p.src), b = NS.dev(p.dst); return `<tr><td><span class="${s[1]}">${s[0]}</span></td><td>${a ? esc(a.name) : '?'}</td><td>${b ? esc(b.name) : '?'} (${p.ip})</td><td>ICMP</td><td>${p.num}</td><td><button class="pbtn" type="button" data-fire="${p.num}">Fire</button></td></tr>`; }).join('') : '<tr><td colspan="6" class="empty">مفيش PDUs. اضغط New (أو أداة الظرف) ثم اختر جهازين.</td></tr>';
+    B.innerHTML = t + '</tbody></table>';
+    $('#pNew').onclick = () => setTool('pdu'); $('#pDel').onclick = () => { pdus = []; renderPanel(); };
+    B.querySelectorAll('[data-fire]').forEach(x => x.onclick = () => firePdu(pdus.find(p => p.num === +x.dataset.fire)));
+  } else {
+    H.innerHTML = `<b>Event List</b><span class="sub">${simQ.length ? 'منتظر: ' + simQ.length : ''}</span><button class="pbtn" type="button" id="sReset">Reset</button><button class="pbtn" type="button" id="sStep"${simQ.length && !simBusy ? '' : ' disabled'}>Capture / Forward</button><button class="pbtn${simPlay ? ' on' : ''}" type="button" id="sPlay"${simQ.length || simPlay ? '' : ' disabled'}>${simPlay ? 'Pause' : 'Play'}</button>`;
+    let t = '<table class="tbl"><thead><tr><th>Vis. Time</th><th>Last Device</th><th>At Device</th><th>Type</th></tr></thead><tbody>';
+    t += simRows.length ? simRows.map((r, k) => `<tr class="ev" data-ev="${k}"><td>${r.t}</td><td>${r.last}</td><td>${r.at}</td><td><span class="sw" style="background:${r.fail ? 'var(--bad)' : r.dir === 'rep' ? 'var(--good)' : 'var(--accent)'}"></span>${r.type}</td></tr>`).join('') : '<tr><td colspan="4" class="empty">مفيش أحداث. اعمل ping من CLI أو أرسل PDU، وبعدين اضغط Capture / Forward.</td></tr>';
+    B.innerHTML = t + '</tbody></table>'; B.scrollTop = B.scrollHeight;
+    $('#sReset').onclick = simReset; $('#sStep').onclick = () => stepOne(); $('#sPlay').onclick = () => simPlay ? stopPlay() : startPlay();
+    B.querySelectorAll('[data-ev]').forEach(x => x.onclick = () => showEvent(simRows[+x.dataset.ev]));
+  }
+}
+
+/* ---------- PDUs and pings ---------- */
+function createPdu(s, d) {
+  const di = d.ifaces.find(i => i.ip); if (!di) return toast(d.name + ' لا يملك IP', 'bad');
+  const p = { num: ++pduNum, src: s.id, dst: d.id, ip: di.ip, status: 'none' }; pdus.push(p); firePdu(p);
+}
+function firePdu(p) {
+  if (!p) return; const s = NS.dev(p.src), d = NS.dev(p.dst);
+  if (!s || !d) { p.status = 'fail'; return renderPanel(); }
+  const r = NS.ping(s, p.ip);
+  if (mode === 'rt') { p.status = r.ok ? 'ok' : 'fail'; renderPanel(); toast(r.ok ? 'Successful: الحزمة وصلت والرد رجع' : 'Failed: ' + r.fail.msg, r.ok ? 'good' : 'bad'); }
+  else { p.status = 'run'; queueEvents(r.steps, r.ok ? null : r.fail, p); }
+}
+/* called from the CLI after ping / tracert; returns true when packets were queued */
+function onPingResult(d, r) { if (mode !== 'sim') return false; queueEvents(r.trace, r.fail, null); return true; }
+
+function queueEvents(steps, fail, pdu) {
+  if (!simQ.length && !simBusy) { gPkt.innerHTML = ''; }
+  steps.forEach(s => simQ.push({ from: s.from, to: s.to, dir: s.dir || 'req', srcIp: s.srcIp, dstIp: s.dstIp, ttl: s.ttl, pdu }));
+  if (fail) simQ.push({ fail: true, at: fail.at.id, msg: fail.msg, pdu, dir: 'x' });
+  else if (simQ.length) simQ[simQ.length - 1].last = true;
+  if (!steps.length && !fail && pdu) { pdu.status = 'ok'; }
+  renderPanel();
+}
+function simReset() { stopPlay(); simTok++; simQ = []; simRows = []; simT = 0; simBusy = false; gPkt.innerHTML = ''; pdus.forEach(p => { if (p.status === 'run') p.status = 'none'; }); renderPanel(); }
+function stopPlay() { simPlay = false; clearTimeout(simTimer); if (mode === 'sim') { const b = $('#sPlay'); if (b) renderPanel(); } }
+function startPlay() { simPlay = true; renderPanel(); stepOne(); }
+
+function envelope(color) {
+  const g = document.createElementNS(SVGNS, 'g');
+  g.innerHTML = `<rect class="env-rect" x="-11" y="-8" width="22" height="16" rx="3" fill="${color}"/><path class="env-line" d="M-8 -4.5l8 6 8-6"/>`; return g;
+}
+function badge(dev, ok, msg) {
+  const m = document.createElementNS(SVGNS, 'g'); m.setAttribute('transform', `translate(${dev.x + 24} ${dev.y - 28})`);
+  m.innerHTML = ok ? '<circle r="11" fill="var(--good)" class="env-rect"/><path d="M-5 0l3.5 4 6-7" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>' : '<circle r="11" fill="var(--bad)" class="env-rect"/><path d="M-4 -4L4 4M4 -4L-4 4" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/>';
+  gPkt.appendChild(m);
+}
+function stepOne() {
+  if (simBusy || !simQ.length) { if (!simQ.length) stopPlay(); return; }
+  const ev = simQ.shift(), tok = simTok; simBusy = true; simT += 0.001;
+  const row = { t: simT.toFixed(3), type: 'ICMP', dir: ev.dir, ev };
+  const done = () => {
+    if (tok !== simTok) return; simBusy = false; simRows.push(row);
+    if (ev.pdu && (ev.last || ev.fail)) ev.pdu.status = ev.fail ? 'fail' : 'ok';
+    renderPanel();
+    if (ev.last) { const d = NS.dev(ev.to); if (d) badge(d, true); toast('Successful: الحزمة وصلت والرد رجع', 'good'); }
+    if (simPlay) { if (simQ.length) simTimer = setTimeout(stepOne, 450); else stopPlay(); }
+  };
+  if (ev.fail) {
+    const d = NS.dev(ev.at); row.last = '—'; row.at = d ? esc(d.name) : '?'; row.fail = true; row.type = 'ICMP (Failed)';
+    if (d) badge(d, false); toast(ev.msg, 'bad'); return done();
+  }
+  const a = NS.dev(ev.from), b = NS.dev(ev.to); if (!a || !b) { simBusy = false; return stepOne(); }
+  row.last = esc(a.name); row.at = esc(b.name);
+  gPkt.querySelectorAll('g').forEach(g => g.remove());
+  const env = envelope(ev.dir === 'rep' ? 'var(--good)' : 'var(--accent)'); gPkt.appendChild(env);
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches, t0 = performance.now(), D = reduce ? 1 : 560;
+  const tick = t => { if (tok !== simTok) return; const p = Math.min(1, (t - t0) / D); env.setAttribute('transform', `translate(${a.x + (b.x - a.x) * p} ${a.y + (b.y - a.y) * p})`); p < 1 ? requestAnimationFrame(tick) : done(); };
+  env.setAttribute('transform', `translate(${a.x} ${a.y})`); requestAnimationFrame(tick);
+}
+function showEvent(r) {
+  if (!r) return; const ev = r.ev, at = NS.dev(ev.fail ? ev.at : ev.to); const rows = [];
+  rows.push(['At Device', at ? at.name : '?']);
+  if (ev.fail) { rows.push(['Result', 'Dropped']); rows.push(['Reason', ev.msg]); }
+  else {
+    const last = NS.dev(ev.from); rows.push(['Last Device', last ? last.name : '?']);
+    rows.push(['Type', ev.dir === 'rep' ? 'ICMP Echo Reply' : 'ICMP Echo Request']);
+    rows.push(['Layer 3 · Src IP', ev.srcIp || '—']); rows.push(['Layer 3 · Dst IP', ev.dstIp || '—']); rows.push(['TTL', ev.ttl || '—']);
+    const note = !at ? '' : at.type === 'router' ? 'Layer 3: بحث في Routing Table ثم تمرير الحزمة (TTL-1)' : at.type === 'switch' ? 'Layer 2: بحث في MAC Table وتمرير داخل نفس الـ VLAN' : (ev.last ? 'الحزمة وصلت للوجهة' : 'استقبال على الـ NIC ومعالجة');
+    rows.push(['Layer 2', note]);
+  }
+  $('#pduTitle').textContent = 'PDU Information'; $('#pduInfo').innerHTML = rows.map(x => `<tr><td>${esc(x[0])}</td><td>${esc(String(x[1]))}</td></tr>`).join('');
+  $('#dlgPdu').showModal();
+}
+
+/* ---------- dialogs ---------- */
+document.querySelectorAll('[data-close]').forEach(b => b.onclick = () => b.closest('dialog').close());
+function loadAndShow(fn) { closeWin(); simReset(); pdus = []; pduNum = 0; Object.keys(logs).forEach(k => delete logs[k]); tool = 'select'; placing = null; pendingCable = null; pduSrc = null; fn(); setTool('select'); renderPanel(); requestAnimationFrame(fit); }
+$('#bScn').onclick = () => {
+  const l = $('#scList'); l.innerHTML = '';
+  Object.keys(NS.scenarios).forEach(k => { const s = NS.scenarios[k], b = document.createElement('button'); b.type = 'button'; b.className = 'btn sc'; b.innerHTML = '<b>' + esc(s.name) + '</b><span>' + esc(s.desc) + '</span>'; b.onclick = () => { $('#dlgScn').close(); loadAndShow(() => NS.loadScenario(k)); toast(s.name, 'good'); }; l.appendChild(b); });
+  $('#dlgScn').showModal();
+};
+$('#bCheat').onclick = () => $('#dlgCheat').showModal();
+$('#bSave').onclick = () => { $('#saveTxt').value = NS.serialize(); $('#dlgSave').showModal(); };
+$('#bCopy').onclick = () => { const t = $('#saveTxt'); t.select(); (navigator.clipboard ? navigator.clipboard.writeText(t.value) : Promise.reject()).then(() => toast('تم النسخ', 'good'), () => toast('حدّد النص ينسخ يدوياً')); };
+$('#bLoad').onclick = () => { try { const t = $('#saveTxt').value; JSON.parse(t); $('#dlgSave').close(); loadAndShow(() => NS.load(t)); toast('تم تحميل الشبكة', 'good'); } catch (e) { toast('النص غير صالح: ' + e.message, 'bad'); } };
+$('#bHelp').onclick = () => $('#dlgWelcome').showModal();
+$('#dlgWelcome').addEventListener('close', () => { try { localStorage.setItem('netlab-welcome2', '1'); } catch (e) { } });
+$('#wlScn').onclick = () => { $('#dlgWelcome').close(); loadAndShow(() => NS.loadScenario('lan')); toast('اضغط على PC0 ثم Desktop ثم Command Prompt، واكتب ping 192.168.2.10', 'good'); };
+$('#wlEmpty').onclick = () => { $('#dlgWelcome').close(); loadAndShow(() => NS.fresh()); };
+addEventListener('resize', () => requestAnimationFrame(fit));
+
+/* ---------- boot ---------- */
+initGrid();
+let restored = false;
+try { const s = localStorage.getItem('netlab-v2'); if (s) { NS.load(s); restored = NS.state.devices.length > 0; } } catch (e) { restored = false; }
+if (!restored) NS.loadScenario('lan');
+refreshPalette(); renderPanel(); render(); requestAnimationFrame(fit);
+try { if (!localStorage.getItem('netlab-welcome2')) setTimeout(() => $('#dlgWelcome').showModal(), 200); } catch (e) { }
+</script>
