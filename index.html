@@ -1078,4 +1078,694 @@ const CAB_AR = { auto: 'Auto', console: 'Console', straight: 'Copper Straight-Th
 
 function toast(msg, kind) { const t = $('#toast'); t.textContent = msg; t.className = 'toast show ' + (kind || ''); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), 3800); }
 function applyView() { world.setAttribute('transform', `translate(${view.x} ${view.y}) scale(${view.k})`); }
-function save() { try { localStorage.setItem('netlab-v4', NS.serialize()); }
+function save() { try { localStorage.setItem('netlab-v4', NS.serialize()); } catch (e) { } }
+
+function initGrid() {
+  const defs = document.createElementNS(SVGNS, 'defs');
+  defs.innerHTML = '<linearGradient id="hg2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" style="stop-color:var(--accent)"/><stop offset="1" style="stop-color:var(--accent-2)"/></linearGradient><linearGradient id="sg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" style="stop-color:var(--accent);stop-opacity:.9"/><stop offset="1" style="stop-color:var(--accent-2);stop-opacity:.75"/></linearGradient><pattern id="gp" width="30" height="30" patternUnits="userSpaceOnUse"><circle cx="15" cy="15" r="1.1" class="grid-dot"/></pattern>';
+  svg.insertBefore(defs, world);
+  gGrid.innerHTML = '<rect x="-4000" y="-4000" width="8000" height="8000" fill="url(#gp)"/>';
+}
+
+/* device artwork */
+const wifiMark = (x, y) => `<g transform="translate(${x} ${y})" fill="none" stroke="var(--ink)" stroke-width="1.8" stroke-linecap="round"><path d="M-7 -2a10 10 0 0114 0M-4 1.5a5.5 5.5 0 018 0"/><circle r="1.3" cy="5" fill="var(--ink)"/></g>`;
+function glyph(d) {
+  const m = d.model || d.type, t = d.type;
+  const scr = (x, y, w, h) => `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="2" fill="url(#sg)"/>`;
+  if (t === 'pc') {
+    if (m === 'Laptop') return '<g class="d-shadow"><rect class="d-body" x="-21" y="-20" width="42" height="26" rx="4"/>' + scr(-17, -16, 34, 18) + '<path class="d-body" d="M-27 6h54l-4 9h-46z"/></g>';
+    if (m === 'Server') return '<g class="d-shadow"><rect class="d-body" x="-14" y="-24" width="28" height="46" rx="4"/><path class="d-line" d="M-14 -9H14M-14 6H14"/><circle class="led" cx="-7" cy="-16" r="2"/><circle class="led" cx="-7" cy="-1" r="2"/><circle class="led off" cx="-7" cy="14" r="2"/><path class="d-line" d="M0 -16h8M0 -1h8"/></g>';
+    if (m === 'Tablet') return '<g class="d-shadow"><rect class="d-body" x="-18" y="-22" width="36" height="44" rx="5"/>' + scr(-14, -17, 28, 32) + '<circle class="d-line" cx="0" cy="18.5" r="1.6"/></g>';
+    if (m === 'Smartphone') return '<g class="d-shadow"><rect class="d-body" x="-12" y="-23" width="24" height="46" rx="6"/>' + scr(-9, -17, 18, 32) + '<circle class="d-line" cx="0" cy="19" r="1.5"/></g>';
+    if (m === 'IP Phone') return '<g class="d-shadow"><path class="d-body" d="M-22 14l4-24h36l4 24z"/>' + scr(-12, -8, 24, 8) + '<path class="d-line" d="M-12 6h4M-2 6h4M8 6h4"/><path class="d-body" d="M-24 -12q24 -14 48 0v-6q-24 -14 -48 0z"/></g>';
+    if (m === 'Printer') return '<g class="d-shadow"><rect class="d-body" x="-22" y="-6" width="44" height="22" rx="4"/><rect class="d-body" x="-14" y="-20" width="28" height="14" rx="1"/><rect fill="var(--work)" class="d-line" x="-12" y="6" width="24" height="12" rx="1"/><path class="d-line" d="M-8 11h16M-8 14h10"/></g>';
+    if (m === 'WLC') return '<g class="d-shadow"><rect class="d-body" x="-26" y="-12" width="52" height="24" rx="5"/><circle class="led" cx="-18" cy="0" r="2.2"/>' + wifiMark(8, -1) + '</g>';
+    if (d.iot === 'sensor') return '<g class="d-shadow"><circle class="d-body" r="19"/><path d="M-3 -12v14a5 5 0 106 0v-14a3 3 0 00-6 0z" fill="url(#sg)" class="d-line"/></g>';
+    if (d.iot === 'camera') return '<g class="d-shadow"><rect class="d-body" x="-22" y="-12" width="34" height="22" rx="4"/><path class="d-body" d="M12 -4l12 -7v22l-12 -7z"/><circle r="6" cx="-6" cy="-1" fill="url(#sg)"/></g>';
+    if (d.iot === 'controller') return '<g class="d-shadow"><rect class="d-body" x="-18" y="-20" width="36" height="40" rx="6"/><circle r="9" cy="-4" fill="url(#sg)"/><path class="d-line" d="M-9 13h18"/></g>';
+    return '<g class="d-shadow"><rect class="d-body" x="-22" y="-23" width="44" height="30" rx="5"/>' + scr(-18, -19, 36, 22) + '<path class="d-body" d="M-5 7h10l2 9h-14z"/><rect class="d-body" x="-15" y="16" width="30" height="4" rx="2"/></g>';
+  }
+  if (t === 'switch' || t === 'hub') {
+    if (m === 'Home Router') return '<g class="d-shadow"><rect class="d-body" x="-26" y="-4" width="52" height="18" rx="5"/><path class="d-line" d="M-14 -4l-4 -16M14 -4l4 -16"/><circle class="led" cx="-16" cy="6" r="2"/><circle class="led" cx="-8" cy="6" r="2"/><circle class="led off" cx="0" cy="6" r="2"/></g>' + wifiMark(0, -16);
+    if (m === 'Coaxial Splitter') return '<g class="d-shadow"><rect class="d-body" x="-18" y="-14" width="36" height="28" rx="6"/><circle class="d-line" cx="-9" cy="-5" r="3.5"/><circle class="d-line" cx="9" cy="-5" r="3.5"/><circle class="d-line" cx="-9" cy="6" r="3.5"/><circle class="d-line" cx="9" cy="6" r="3.5"/></g>';
+    let p = ''; const n = Math.min(d.ifaces.length || 8, 8); for (let k = 0; k < n; k++) { const x = -25 + k * 6.9, i = d.ifaces[k]; p += `<rect class="d-line" fill="var(--work)" x="${x}" y="1" width="4.6" height="7" rx="1"/><circle class="led ${i && NS.linkUp(i) ? '' : 'off'}" cx="${x + 2.3}" cy="-6" r="1.7"/>`; }
+    const l3 = d.l3 ? '<path d="M-24 -11h48" stroke="var(--accent-2)" stroke-width="2"/>' : '';
+    return '<g class="d-shadow"><rect class="d-body" x="-30" y="-14" width="60" height="28" rx="' + (t === 'hub' ? 3 : 6) + '"/>' + p + l3 + '</g>';
+  }
+  if (t === 'ap') return '<g class="d-shadow"><ellipse class="d-body" cx="0" cy="10" rx="22" ry="9"/><circle class="led" cx="-12" cy="10" r="2"/>' + (m === 'Repeater' ? '<path class="d-line" d="M0 1v-10" stroke-width="3"/>' : '') + '</g>' + wifiMark(0, -10);
+  if (t === 'firewall') return '<g class="d-shadow"><rect class="d-body" x="-26" y="-18" width="52" height="36" rx="5"/><path class="d-line" d="M-26 -6h52M-26 6h52M-12 -18v12M10 -6v12M-4 6v12"/><path d="M0 -26l-6 3v5c0 4 3 6 6 7 3-1 6-3 6-7v-5z" fill="var(--bad)" stroke="var(--ink)" stroke-width="1" transform="translate(0 8) scale(.001)"/></g>';
+  if (t === 'cloud') return '<g class="d-shadow"><path class="d-body" d="M-18 12a10 10 0 010-20 13 13 0 0125-4 12 12 0 0114 12 8 8 0 01-2 12z"/><path d="M-8 4h22M-3 -2h12" stroke="var(--accent)" stroke-width="2" stroke-linecap="round"/></g>';
+  if (t === 'modem') return '<g class="d-shadow"><rect class="d-body" x="-24" y="-6" width="48" height="18" rx="4"/><circle class="led" cx="-14" cy="3" r="2"/><circle class="led" cx="-6" cy="3" r="2"/><path class="d-line" d="M10 3h8"/></g>';
+  return '<g class="d-shadow"><circle class="d-body" r="25"/><circle r="18" fill="url(#hg2)"/><path d="M-9 -3h18M5 -8l5 5-5 5M9 5h-18M-5 0l-5 5 5 5" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></g>';
+}
+function iconSvg(model) { const M = NS.MODELS[model]; const d = { type: M ? M.type : model, model, ifaces: [], iot: M && M.iot, l3: M && M.l3 }; return `<svg viewBox="-34 -34 68 60" aria-hidden="true">${glyph(d)}</svg>`; }
+function devSub(d) { const i = NS.ipIfs(d).find(x => x.ip); return i ? i.ip : ''; }
+
+function render() {
+  NS.refresh(); gLinks.innerHTML = ''; gDev.innerHTML = '';
+  NS.state.devices.forEach(d => d.ifaces.forEach(i => {
+    if (!i.link) return; const p = NS.peerIf(i); if (!p || (d.id > p.dev.id && i.link.cable !== 'wireless')) return;
+    const up = NS.linkUp(i), x1 = d.x, y1 = d.y, x2 = p.dev.x, y2 = p.dev.y, dx = x2 - x1, dy = y2 - y1, L = Math.hypot(dx, dy) || 1;
+    const at = (dist, off) => [x1 + dx / L * dist - dy / L * off, y1 + dy / L * dist + dx / L * off];
+    const k = Math.min(1, L / 190), dd = 38 * k, ld = 84 * k;
+    const e1 = at(dd, 0), e2 = at(L - dd, 0), l1 = at(ld, -10), l2 = at(L - ld, -10);
+    const g = document.createElementNS(SVGNS, 'g'); g.dataset.link = d.id + '|' + i.name;
+    const c = i.link.cable || 'straight';
+    g.innerHTML = `<line class="cab ${c}${c === 'wireless' ? ' wl' : ''}" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/><line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="transparent" stroke-width="24"/><circle class="lend ${up ? 'up' : 'down'}" cx="${e1[0]}" cy="${e1[1]}" r="4.5"/><circle class="lend ${up ? 'up' : 'down'}" cx="${e2[0]}" cy="${e2[1]}" r="4.5"/>${c === 'wireless' ? `<g transform="translate(${(x1 + x2) / 2} ${(y1 + y2) / 2})" fill="none" stroke="var(--accent)" stroke-width="1.8" stroke-linecap="round"><circle r="9" fill="var(--work)" stroke="none"/><path d="M-5 -1a7 7 0 0110 0M-3 2a3.6 3.6 0 016 0"/></g>` : `<text class="port" x="${l1[0]}" y="${l1[1]}">${NS.short(i.name)}</text><text class="port" x="${l2[0]}" y="${l2[1]}">${NS.short(p.iface.name)}</text>`}`;
+    gLinks.appendChild(g);
+  }));
+  NS.state.devices.forEach(d => {
+    const g = document.createElementNS(SVGNS, 'g'); g.dataset.id = d.id; g.setAttribute('transform', `translate(${d.x} ${d.y})`);
+    const sel = (pendingCable && pendingCable.dev === d.id) || pduSrc === d.id;
+    g.setAttribute('class', (sel ? 'sel ' : '') + (d.off ? 'off-dev' : '')); g.style.cursor = 'pointer';
+    g.innerHTML = '<circle class="selring" r="38"/>' + glyph(d) + `<rect x="-34" y="-30" width="68" height="76" fill="transparent"/><text class="d-label" y="34">${esc(d.name)}</text><text class="d-sub" y="46">${esc(devSub(d))}</text>`;
+    gDev.appendChild(g);
+  });
+  updateHint(); save();
+  if (typeof refreshPanelIfOpen === 'function') refreshPanelIfOpen();
+}
+
+function updateHint() {
+  const h = $('#hint'); let t = '';
+  if (!NS.state.devices.length && tool !== 'place') t = 'مساحة العمل فاضية. اختر جهاز من اللوحة تحت ثم اضغط هنا لوضعه، أو افتح سيناريو جاهز';
+  else if (tool === 'place') t = 'اضغط في أي مكان لوضع ' + (placing ? placing.model : 'الجهاز');
+  else if (tool === 'cable') t = pendingCable ? 'اختر الجهاز التاني (' + CAB_AR[cableType] + ')' : 'اختر الجهاز الأول للتوصيل (' + CAB_AR[cableType] + ')';
+  else if (tool === 'pdu') t = pduSrc ? 'اختر جهاز الوجهة' : 'اختر جهاز المصدر للحزمة';
+  else if (tool === 'del') t = 'اضغط جهاز أو كابل لحذفه';
+  h.textContent = t; h.hidden = !t;
+  $('#toolLbl').textContent = { select: 'Select', del: 'Delete', pdu: 'Simple PDU', place: 'Place', cable: 'Connections' }[tool];
+}
+
+function fit() {
+  const W = svg.clientWidth, H = svg.clientHeight, ds = NS.state.devices; if (!W || !H) return;
+  if (!ds.length) { view.x = 0; view.y = 0; view.k = 1; return applyView(); }
+  const xs = ds.map(d => d.x), ys = ds.map(d => d.y), pad = 60;
+  const x0 = Math.min(...xs) - pad, x1 = Math.max(...xs) + pad, y0 = Math.min(...ys) - pad, y1 = Math.max(...ys) + pad + 22;
+  view.k = Math.min(1.3, W / (x1 - x0), H / (y1 - y0));
+  view.x = W / 2 - (x0 + x1) / 2 * view.k; view.y = H / 2 - (y0 + y1) / 2 * view.k; applyView();
+}
+function toWorld(e) { const r = svg.getBoundingClientRect(); return [(e.clientX - r.left - view.x) / view.k, (e.clientY - r.top - view.y) / view.k]; }
+
+function setTool(t) {
+  tool = t; pendingCable = null; pduSrc = null; if (t !== 'place') placing = null;
+  document.querySelectorAll('[data-tool]').forEach(b => b.setAttribute('aria-pressed', b.dataset.tool === t));
+  if (typeof refreshPalette === 'function') refreshPalette();
+  render();
+}
+
+/* pointer handling: drag devices, pan, pinch zoom, taps */
+const ptrs = new Map(); let drag = null, pinch = null;
+svg.addEventListener('pointerdown', e => {
+  svg.setPointerCapture(e.pointerId); ptrs.set(e.pointerId, [e.clientX, e.clientY]);
+  if (ptrs.size === 2) { const [a, b] = [...ptrs.values()]; const r = svg.getBoundingClientRect(); pinch = { d0: Math.hypot(a[0] - b[0], a[1] - b[1]), k0: view.k, mx: (a[0] + b[0]) / 2 - r.left, my: (a[1] + b[1]) / 2 - r.top, vx: view.x, vy: view.y }; drag = null; return; }
+  const dv = e.target.closest('[data-id]'), lk = e.target.closest('[data-link]');
+  if (dv) { const d = NS.dev(dv.dataset.id), w = toWorld(e); drag = { kind: 'dev', d, ox: w[0] - d.x, oy: w[1] - d.y, sx: e.clientX, sy: e.clientY, vx: view.x, vy: view.y, moved: false }; }
+  else if (lk) drag = { kind: 'link', key: lk.dataset.link, sx: e.clientX, sy: e.clientY, moved: false };
+  else drag = { kind: 'pan', sx: e.clientX, sy: e.clientY, vx: view.x, vy: view.y, moved: false, w: toWorld(e) };
+});
+svg.addEventListener('pointermove', e => {
+  if (ptrs.has(e.pointerId)) ptrs.set(e.pointerId, [e.clientX, e.clientY]);
+  if (pinch && ptrs.size >= 2) { const [a, b] = [...ptrs.values()]; const k = Math.max(.3, Math.min(2.6, pinch.k0 * Math.hypot(a[0] - b[0], a[1] - b[1]) / pinch.d0)); const wx = (pinch.mx - pinch.vx) / pinch.k0, wy = (pinch.my - pinch.vy) / pinch.k0; view.k = k; view.x = pinch.mx - wx * k; view.y = pinch.my - wy * k; applyView(); return; }
+  if (!drag) return;
+  if (Math.hypot(e.clientX - drag.sx, e.clientY - drag.sy) > 7) drag.moved = true;
+  if (!drag.moved) return;
+  if (drag.kind === 'dev' && tool === 'select') { const w = toWorld(e); drag.d.x = Math.round(w[0] - drag.ox); drag.d.y = Math.round(w[1] - drag.oy); render(); }
+  else if (drag.kind === 'pan' || (drag.kind === 'dev' && tool !== 'select')) { view.x = drag.vx + e.clientX - drag.sx; view.y = drag.vy + e.clientY - drag.sy; applyView(); }
+});
+const endPtr = e => { ptrs.delete(e.pointerId); if (ptrs.size < 2) pinch = null; };
+svg.addEventListener('pointerup', e => {
+  endPtr(e); const dr = drag; drag = null; if (!dr || dr.moved) return;
+  if (dr.kind === 'dev') tapDevice(dr.d);
+  else if (dr.kind === 'link' && tool === 'del') { const [id, name] = dr.key.split('|'); const d = NS.dev(id); NS.disconnect(NS.iface(d, name)); render(); toast('تم فصل الكابل'); }
+  else if (dr.kind === 'pan' && tool === 'place' && placing) placeAt(dr.w);
+});
+svg.addEventListener('pointercancel', e => { endPtr(e); drag = null; });
+svg.addEventListener('wheel', e => { e.preventDefault(); const r = svg.getBoundingClientRect(), mx = e.clientX - r.left, my = e.clientY - r.top, k = Math.max(.3, Math.min(2.6, view.k * (e.deltaY < 0 ? 1.12 : .89))); const wx = (mx - view.x) / view.k, wy = (my - view.y) / view.k; view.k = k; view.x = mx - wx * k; view.y = my - wy * k; applyView(); }, { passive: false });
+
+function placeAt(w) {
+  const d = NS.addDevice(placing.model, Math.round(w[0]), Math.round(w[1]));
+  toast(d.name + ' تمت إضافته. اضغط عليه لفتح نافذته', 'good'); setTool('select');
+}
+
+function choosePort(dev, cb, title) {
+  $('#portTitle').textContent = title || ('اختر بورت على ' + dev.name);
+  const box = $('#portOpts'); box.innerHTML = '';
+  const ks = NS.CABLE_KINDS[cableType];
+  dev.ifaces.forEach(i => {
+    if (ks && !ks.includes(i.kind)) return;
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'btn opt'; b.disabled = !!i.link;
+    b.innerHTML = '<span>' + esc(i.name) + '</span><span>' + (i.link ? 'مستخدم' : 'فاضي') + '</span>';
+    b.onclick = () => { $('#dlgPort').close(); cb(i.name); }; box.appendChild(b);
+  });
+  $('#dlgPort').showModal();
+}
+
+function doConnect(a, pa, b, pb) {
+  const err = NS.connect(a, b, cableType, pa, pb); pendingCable = null; render();
+  if (err) return toast(err, 'bad');
+  const ia = pa ? NS.iface(a, pa) : null; const link = (ia || a.ifaces.find(i => i.link && i.link.dev === b.id)).link;
+  toast('تم توصيل ' + a.name + ' بـ ' + b.name + ' (' + CAB_AR[link.cable] + ')', 'good');
+}
+
+function tapDevice(d) {
+  if (tool === 'select') return openWin(d.id);
+  if (tool === 'del') { NS.removeDevice(d); render(); return toast('تم حذف ' + d.name); }
+  if (tool === 'cable') {
+    if (!pendingCable) {
+      if (cableType === 'auto') { pendingCable = { dev: d.id, port: null }; return render(); }
+      return choosePort(d, name => { pendingCable = { dev: d.id, port: name }; render(); });
+    }
+    const a = NS.dev(pendingCable.dev), pa = pendingCable.port;
+    if (a === d) { pendingCable = null; return render(); }
+    if (cableType === 'auto') return doConnect(a, null, d, null);
+    return choosePort(d, name => doConnect(a, pa, d, name));
+  }
+  if (tool === 'pdu') {
+    if (!pduSrc) { if (!NS.canOriginate(d) || !NS.ipIfs(d).some(i => i.ip)) { return toast(!NS.canOriginate(d) ? d.name + ' جهاز طبقة 1/2 لا يرسل حزم IP' : d.name + ' لا يملك IP. اضبطه أولاً', 'bad'); } pduSrc = d.id; return render(); }
+    const s = NS.dev(pduSrc); pduSrc = null; render();
+    if (s === d) return;
+    return createPdu(s, d);
+  }
+}
+/* ===== UI 2: device window (Physical / Config / Services / CLI / Desktop) ===== */
+const logs = {}, hist = {}; let winDev = null, curTab = 'cfg';
+const modelLabel = d => (NS.MODELS[d.model] ? NS.MODELS[d.model].label : d.type);
+const isBrowser = d => ['PC', 'Laptop', 'Tablet', 'Smartphone', 'Server'].includes(d.model);
+
+function tabsFor(d) {
+  const t = [['phys', 'Physical'], ['cfg', 'Config']];
+  if (d.svc) t.push(['svc', 'Services']);
+  if (d.type === 'pc') t.push(['desk', 'Desktop']); else if (NS.hasCli(d)) t.push(['cli', 'CLI']);
+  return t;
+}
+function openWin(id, tab) {
+  const d = NS.dev(id); if (!d) return; winDev = id;
+  $('#win').hidden = false; document.body.style.overflow = 'hidden';
+  buildTabs(d); fillWin(d); showTab(tab || (d.type === 'pc' ? 'desk' : 'cfg'));
+}
+function closeWin() { winDev = null; $('#win').hidden = true; render(); requestAnimationFrame(fit); }
+function buildTabs(d) {
+  const w = $('#wTabs'); w.innerHTML = '';
+  tabsFor(d).forEach(([k, l]) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'wtab'; b.setAttribute('role', 'tab'); b.dataset.tab = k; b.textContent = l; b.onclick = () => showTab(k); w.appendChild(b); });
+}
+function fillWin(d) {
+  $('#wTitle').innerHTML = esc(d.name) + '<small>' + esc(modelLabel(d)) + '</small>';
+  renderPhys(d); renderCfg(d); if (d.svc) renderSvc(d); if (NS.hasCli(d)) renderCli(d); if (d.type === 'pc') { renderDesk(d); renderIpc(d); }
+}
+const PANES = { phys: 'pPhys', cfg: 'pCfg', cli: 'pCli', desk: 'pDesk', ipc: 'pIpc', svc: 'pSvc', web: 'pWeb', iot: 'pWeb' };
+function showTab(t) {
+  const d = NS.dev(winDev); if (!d) return;
+  const ok = tabsFor(d).map(x => x[0]).concat(d.type === 'pc' ? ['cli', 'ipc', 'web', 'iot'] : []); if (!ok.includes(t)) t = 'cfg';
+  curTab = t; const sub = d.type === 'pc' && ['cli', 'ipc', 'web', 'iot'].includes(t), hl = sub ? 'desk' : t;
+  document.querySelectorAll('.wtab').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === hl));
+  const show = PANES[t]; ['pPhys', 'pCfg', 'pCli', 'pDesk', 'pIpc', 'pSvc', 'pWeb'].forEach(id => { $('#' + id).hidden = id !== show; });
+  $('#cliBar').hidden = !sub;
+  if (t === 'web') renderWeb(d); if (t === 'iot') renderIot(d);
+  if (t === 'cli') { const o = $('#out'); o.scrollTop = o.scrollHeight; setTimeout(() => { try { $('#cmdIn').focus({ preventScroll: true }); } catch (e) { } }, 50); }
+}
+function refreshPanelIfOpen() { const d = NS.dev(winDev); if (!d || $('#win').hidden) return; renderPhys(d); if (!inputFocused()) { renderCfg(d); if (d.type === 'pc') renderIpc(d); } }
+function inputFocused() { const a = document.activeElement; return a && a.matches && a.matches('#win input[type=text], #win textarea, #win select') && a.id !== 'cmdIn'; }
+const afterEdit = d => { render(); $('#wTitle').innerHTML = esc(d.name) + '<small>' + esc(modelLabel(d)) + '</small>'; renderCfg(d); if (d.svc) renderSvc(d); if (d.type === 'pc') renderIpc(d); };
+
+/* ---------- Physical ---------- */
+function renderPhys(d) {
+  const M = NS.MODELS[d.model] || {};
+  let h = `<div class="pwr"><button class="pwrbtn" type="button" id="pwrBtn" aria-pressed="${!d.off}" aria-label="Power"><svg viewBox="0 0 24 24"><path d="M12 3v8M6.3 6.8a8 8 0 1011.4 0"/></svg></button><div><b>Power ${d.off ? 'OFF' : 'ON'}</b><p class="msg">${esc(M.desc || '')}<br>اضغط الزرار لتشغيل أو إطفاء الجهاز. الموديولات بتتركّب والجهاز مطفأ فقط.</p></div></div>`;
+  if ((M.slots || []).length) {
+    h += '<h4 class="msg" style="margin:10px 0 6px"><b>Modules</b> (' + (d.off ? 'مسموح التركيب' : 'اطفئ الجهاز أولاً') + ')</h4>';
+    M.slots.forEach((kind, k) => {
+      const opts = Object.keys(NS.MODULES).filter(n => NS.MODULES[n].slot === kind);
+      h += `<div class="mod"><span>${NS.SLOT_AR[kind]} ${k + 1}</span><select class="fs" data-slot="${k}" ${d.off ? '' : 'disabled'}><option value="">— فاضي —</option>${opts.map(n => `<option value="${esc(n)}" ${d.slots[k] === n ? 'selected' : ''}>${esc(NS.MODULES[n].label)}</option>`).join('')}</select></div>`;
+    });
+  }
+  const L = d.loc || { b: 0, c: 0 };
+  h += `<div class="mod"><span>Location</span><span style="display:flex;gap:6px"><select class="fs" data-loc="b">${[0, 1, 2].map(x => `<option value="${x}" ${L.b === x ? 'selected' : ''}>Building ${x + 1}</option>`).join('')}</select><select class="fs" data-loc="c">${[0, 1].map(x => `<option value="${x}" ${L.c === x ? 'selected' : ''}>Closet ${x + 1}</option>`).join('')}</select></span></div>`;
+  h += '<div class="chassis"><div class="ports">';
+  d.ifaces.forEach(i => { const up = NS.linkUp(i), p = NS.peerIf(i); h += `<div class="ptile"><span class="l"><span class="dot ${up ? 'up' : ''}"></span>${esc(NS.short(i.name))}</span><i></i><span style="color:var(--muted)">${p ? esc(p.dev.name) : (i.kind === 'radio' ? (i.clients || []).length + ' clients' : '—')}</span></div>`; });
+  h += '</div></div><p class="msg" style="margin-top:10px">النقطة الخضراء = الرابط شغال، الحمراء = واقف (كابل غلط أو بورت مقفول أو طرف مطفأ).</p>';
+  $('#pPhys').innerHTML = h;
+  $('#pwrBtn').onclick = () => { d.off = !d.off; render(); fillWin(d); toast(d.name + (d.off ? ' اتطفى' : ' اشتغل'), d.off ? '' : 'good'); };
+  $('#pPhys').querySelectorAll('[data-slot]').forEach(s => s.onchange = () => { const e = NS.setModule(d, +s.dataset.slot, s.value); if (e) toast(e, 'bad'); else toast(s.value ? 'تم تركيب الموديول' : 'تم نزع الموديول', 'good'); render(); fillWin(d); });
+  $('#pPhys').querySelectorAll('[data-loc]').forEach(s => s.onchange = () => { d.loc = Object.assign({ b: 0, c: 0 }, d.loc); d.loc[s.dataset.loc] = +s.value; save(); });
+}
+
+/* ---------- generic field binding ---------- */
+function defMask(ip) { const a = parseInt(ip, 10); return a < 128 ? '255.0.0.0' : a < 192 ? '255.255.0.0' : '255.255.255.0'; }
+function getPath(o, p) { return p.split('.').reduce((x, k) => (x == null ? x : x[k]), o); }
+function setPath(o, p, v) { const ks = p.split('.'), last = ks.pop(); const t = ks.reduce((x, k) => x[k], o); t[last] = v; }
+function checkVal(kind, v) {
+  if (kind === 'ip') return v === '' || NS.ip2n(v) !== null ? null : 'IP غير صالح';
+  if (kind === 'mask') return v === '' || NS.maskLen(v) !== null ? null : 'Subnet Mask غير صالح';
+  if (kind === 'int') return /^\d+$/.test(v) ? null : 'رقم غير صالح';
+  if (kind === 'psk') return v === '' || v.length >= 8 ? null : 'الباسورد لازم 8 حروف على الأقل (أو فاضي = شبكة مفتوحة)';
+  return null;
+}
+function setIface(d, i, f, v) {
+  v = typeof v === 'boolean' ? v : String(v).trim();
+  if (f === 'on') { i.shut = !v; return null; }
+  if (f === 'vlan') { const n = parseInt(v, 10); if (!(n >= 1 && n <= 4094)) return 'VLAN لازم يكون من 1 إلى 4094'; i.vlan = n; return null; }
+  if (f === 'ip') { if (v === '') { i.ip = ''; i.mask = ''; return null; } if (NS.ip2n(v) === null) return 'IP غير صالح'; i.ip = v; i.dhcp = false; if (!i.mask || NS.maskLen(i.mask) === null) i.mask = defMask(v); return null; }
+  if (f === 'mask') { if (v === '') { i.mask = ''; return null; } if (NS.maskLen(v) === null) return 'Subnet Mask غير صالح'; i.mask = v; return null; }
+  if (f === 'clock') { const n = parseInt(v, 10); i.clock = n > 0 ? n : 0; return null; }
+  if (f === 'nameif') { i.nameif = v; return null; }
+  if (f === 'level') { const n = parseInt(v, 10); if (!(n >= 0 && n <= 100)) return 'security-level من 0 إلى 100'; i.level = n; return null; }
+  if (f === 'ssid') { i.wifi.ssid = v; return null; }
+  if (f === 'psk') { const e = checkVal('psk', v); if (e) return e; i.wifi.psk = v; return null; }
+  return null;
+}
+
+/* ---------- Config (GUI) ---------- */
+const T = (label, attrs, val, ph, mode) => `<label>${label}<input type="text" ${attrs} value="${esc(val == null ? '' : val)}" ${mode ? 'inputmode="' + mode + '"' : ''} ${ph ? 'placeholder="' + esc(ph) + '"' : ''}></label>`;
+const C = (label, attrs, on) => `<label class="chk"><input type="checkbox" ${attrs} ${on ? 'checked' : ''}> ${label}</label>`;
+function routesSec(d) {
+  let h = '<details class="sec"><summary>ROUTING · Static</summary><div class="in">';
+  h += d.routes.length ? d.routes.map((r, k) => `<div class="rt"><span>${r.net}/${NS.maskLen(r.mask)} via ${r.via}</span><button class="pbtn" type="button" data-rm="${k}">حذف</button></div>`).join('') : '<p class="msg">مفيش static routes.</p>';
+  return h + '<div class="fld three">' + T('Network', 'id="rtNet"', '', '10.3.0.0', 'decimal') + T('Mask', 'id="rtMask"', '', '255.255.255.0', 'decimal') + T('Next Hop', 'id="rtVia"', '', '10.23.0.3', 'decimal') + '</div><button class="btn primary" type="button" id="rtAdd" style="justify-content:center">Add</button></div></details>';
+}
+function dhcpSec(d) {
+  let h = '<details class="sec"><summary>DHCP · Pools</summary><div class="in">';
+  h += d.dhcpPools.length ? d.dhcpPools.map((p, k) => `<div class="rt"><span>${esc(p.name)}: ${p.net}/${p.mask ? NS.maskLen(p.mask) : '?'} gw ${p.gw || '-'} dns ${p.dns || '-'}</span><button class="pbtn" type="button" data-dprm="${k}">حذف</button></div>`).join('') : '<p class="msg">مفيش pools. الراوتر لازم يكون عنده IP على نفس شبكة الـ pool.</p>';
+  h += (d.dhcpExcl || []).map((x, k) => `<div class="rt"><span>excluded ${x.from} - ${x.to || x.from}</span><button class="pbtn" type="button" data-exrm="${k}">حذف</button></div>`).join('');
+  h += '<div class="fld">' + T('Pool name', 'id="dpName"', '', 'LAN1') + T('Network', 'id="dpNet"', '', '192.168.1.0', 'decimal') + T('Mask', 'id="dpMask"', '', '255.255.255.0', 'decimal') + T('Default gateway', 'id="dpGw"', '', '192.168.1.1', 'decimal') + T('DNS (اختياري)', 'id="dpDns"', '', '', 'decimal') + '</div><button class="btn primary" type="button" id="dpAdd" style="justify-content:center">Add pool</button>';
+  h += '<div class="fld">' + T('Exclude from', 'id="exFrom"', '', '192.168.1.1', 'decimal') + T('Exclude to', 'id="exTo"', '', '192.168.1.10', 'decimal') + '</div><button class="btn" type="button" id="exAdd" style="justify-content:center">Add excluded range</button></div></details>';
+  return h;
+}
+function renderCfg(d) {
+  const pane = $('#pCfg'), opened = [...pane.querySelectorAll('details')].map(x => x.open);
+  let h = `<details class="sec" open><summary>GLOBAL · Settings</summary><div class="in"><div class="fld">${T('Display Name', 'data-p="name"', d.name)}`;
+  if (d.type === 'router' || d.type === 'switch' || d.type === 'firewall') h += T('Hostname', 'data-p="host"', d.host || d.name);
+  if (NS.isHost(d)) h += T('Default Gateway', 'data-p="gw" data-v="ip"', d.gw, '0.0.0.0', 'decimal');
+  if (d.type === 'pc') h += T('DNS Server', 'data-p="dns" data-v="ip"', d.dns, '0.0.0.0', 'decimal');
+  h += '</div>';
+  if (d.l3 && d.type === 'switch') h += C('IP Routing (تفعيل التوجيه)', 'data-p="routing"', d.routing);
+  if (d.type === 'router' || d.type === 'firewall') h += `<label class="lab">NAT outside interface<select class="fs" data-p="nat"><option value="">— بدون NAT —</option>${NS.dataIfaces(d).map(i => `<option ${d.nat === i.name ? 'selected' : ''}>${esc(i.name)}</option>`).join('')}</select></label>`;
+  if (d.type === 'firewall') h += C('السماح بـ ICMP عبر الجدار (permit any)', 'data-p="allowIcmp"', d.allowIcmp);
+  h += '</div></details>';
+  if (d.model === 'Access Point' || d.model === 'Home Router') h += `<details class="sec"><summary>WIRELESS · SSID</summary><div class="in"><div class="fld">${T('SSID', 'data-p="wifi.ssid"', d.wifi.ssid)}${T('Password (WPA2)', 'data-p="wifi.psk" data-v="psk"', d.wifi.psk, 'فاضي = مفتوحة')}</div>${d.model === 'Access Point' ? T('WLC IP (اختياري)', 'data-p="wlcIp" data-v="ip"', d.wlcIp, '192.168.1.5', 'decimal') + '<p class="msg">لو ضبطت IP الـ WLC والـ AP يوصله، هياخد SSID والباسورد من الـ WLC.' + (d.joinedWlan ? ' <b>(متصل بالـ WLC: ' + esc(d.joinedWlan.ssid) + ')</b>' : '') + '</p>' : ''}<p class="msg">المدى: ${NS.RANGE} وحدة على الرسم. حرّك الأجهزة بعيد/قريب لتجربة الإشارة.</p></div></details>`;
+  if (d.model === 'WLC') h += `<details class="sec"><summary>WLAN · Controller</summary><div class="in"><div class="fld">${T('SSID', 'data-p="wlan.ssid"', d.wlan.ssid)}${T('Password', 'data-p="wlan.psk" data-v="psk"', d.wlan.psk, 'فاضي = مفتوحة')}</div></div></details>`;
+  if (d.type === 'firewall') h += `<details class="sec"><summary>VPN · Site-to-Site</summary><div class="in">${C('Enable VPN', 'data-p="vpn.on"', d.vpn.on)}<div class="fld">${T('Peer IP', 'data-p="vpn.peer" data-v="ip"', d.vpn.peer, '203.0.113.2', 'decimal')}${T('Pre-shared key', 'data-p="vpn.key"', d.vpn.key)}${T('Local network', 'data-p="vpn.lnet" data-v="ip"', d.vpn.lnet, '192.168.1.0', 'decimal')}${T('Local mask', 'data-p="vpn.lmask" data-v="mask"', d.vpn.lmask)}${T('Remote network', 'data-p="vpn.rnet" data-v="ip"', d.vpn.rnet, '192.168.2.0', 'decimal')}${T('Remote mask', 'data-p="vpn.rmask" data-v="mask"', d.vpn.rmask)}</div><p class="msg">لازم الطرفين يكون عندهم نفس الـ key وكل طرف يشير للتاني كـ Peer، والـ Remote network هي شبكة الطرف التاني.</p></div></details>`;
+  if (d.type === 'router' || d.type === 'firewall' || (d.type === 'switch' && d.l3)) h += routesSec(d);
+  if (d.dhcpPools && d.model !== 'Home Router') h += dhcpSec(d);
+  if (d.model === 'Home Router') h += `<details class="sec"><summary>HOME · DHCP / LAN</summary><div class="in"><p class="msg">DHCP شغال تلقائياً على 192.168.0.0/24 (من .100). الـ NAT مفعّل على بورت Internet. وصّل بورت Internet بالـ Cloud/Modem واضبط الـ IP عليه.</p></div></details>`;
+  if (d.type === 'switch' && d.l3) h += `<details class="sec"><summary>SVI · Interface VLAN</summary><div class="in"><div class="fld">${T('VLAN ID', 'id="sviV"', '', '10', 'numeric')}<button class="btn primary" type="button" id="sviAdd" style="align-self:end;justify-content:center">Add SVI</button></div></div></details>`;
+  NS.allIfs(d).forEach(i => {
+    const up = NS.linkUp(i), p = NS.peerIf(i), k = i.kind, n = esc(i.name);
+    h += `<details class="sec"><summary><span class="dot ${up ? 'up' : ''}"></span>INTERFACE · ${n}</summary><div class="in">`;
+    if (k !== 'console') h += C('Port Status: On', `data-if="${n}" data-f="on"`, !i.shut);
+    if (k === 'wifi') h += `<div class="fld">${T('SSID', `data-if="${n}" data-f="ssid"`, i.wifi.ssid)}${T('Password', `data-if="${n}" data-f="psk"`, i.wifi.psk, 'فاضي = مفتوحة')}</div>`;
+    if (d.type === 'switch' && k !== 'svi' && k !== 'radio') h += `<div class="fld one">${T('Access VLAN', `data-if="${n}" data-f="vlan"`, i.vlan, '', 'numeric')}</div>`;
+    if (k === 'serial') h += `<div class="fld one">${T('Clock rate (طرف DCE)', `data-if="${n}" data-f="clock"`, i.clock || '', '64000', 'numeric')}</div>`;
+    if (d.type === 'firewall' && k !== 'console') h += `<div class="fld">${T('nameif', `data-if="${n}" data-f="nameif"`, i.nameif)}${T('security-level', `data-if="${n}" data-f="level"`, i.level, '0-100', 'numeric')}</div>`;
+    if (k !== 'console' && k !== 'radio' && (d.type !== 'switch' || k === 'svi') && d.model !== 'Meraki MX' || (d.model === 'Meraki MX' && k !== 'console')) h += `<div class="fld">${T('IP Address', `data-if="${n}" data-f="ip"`, i.ip, 'غير محدد', 'decimal')}${T('Subnet Mask', `data-if="${n}" data-f="mask"`, i.mask, '255.255.255.0', 'decimal')}</div>`;
+    h += `<p class="msg" dir="ltr" style="text-align:left">${k === 'svi' ? 'Virtual interface' : 'MAC: ' + i.mac} · ${p ? 'Connected to ' + esc(p.dev.name) + ' (' + esc(NS.short(p.iface.name)) + ') · ' + (CAB_AR[i.link.cable] || i.link.cable) : (k === 'radio' ? (i.clients || []).length + ' wireless clients' : 'Not connected')}${!up && !i.shut && (p || k === 'wifi') ? ' · ' + esc(NS.whyDown(i)) : ''}</p></div></details>`;
+  });
+  pane.innerHTML = h; pane.querySelectorAll('details').forEach((x, k) => { if (opened[k] !== undefined) x.open = opened[k]; });
+}
+function applyField(d, t) {
+  let err = null;
+  if (t.dataset.p) {
+    const p = t.dataset.p; let v = t.type === 'checkbox' ? t.checked : t.value.trim();
+    if (typeof v === 'string') err = checkVal(t.dataset.v, v);
+    if (p === 'name' && v === '') err = 'الاسم مطلوب';
+    if (!err) { setPath(d, p, v); if (p === 'routing') render(); }
+  } else if (t.dataset.if) err = setIface(d, NS.iface(d, t.dataset.if), t.dataset.f, t.type === 'checkbox' ? t.checked : t.value);
+  t.classList.toggle('inv', !!err); if (err) { toast(err, 'bad'); return false; } return true;
+}
+$('#pCfg').addEventListener('change', e => { const d = NS.dev(winDev); if (!d || !e.target.matches('input,select')) return; if (applyField(d, e.target)) afterEdit(d); });
+function openSec(i) { const s = $('#pCfg').querySelectorAll('details')[i]; if (s) s.open = true; }
+$('#pCfg').addEventListener('click', e => {
+  const d = NS.dev(winDev); if (!d) return; const t = e.target.closest('button'); if (!t) return; const v = id => ($('#' + id).value || '').trim(), secIdx = () => [...$('#pCfg').querySelectorAll('details')].findIndex(x => x.contains(t));
+  let ix = secIdx(), msg = null;
+  if (t.dataset.rm !== undefined) d.routes.splice(+t.dataset.rm, 1);
+  else if (t.id === 'rtAdd') {
+    const n = v('rtNet'), m = v('rtMask'), via = v('rtVia');
+    if (NS.ip2n(n) === null || NS.maskLen(m) === null || NS.ip2n(via) === null) return toast('أدخل Network و Mask و Next Hop صحيحين', 'bad');
+    d.routes.push({ net: NS.n2ip(NS.net(n, m)), mask: m, via }); msg = 'تمت إضافة الـ route';
+  } else if (t.dataset.dprm !== undefined) d.dhcpPools.splice(+t.dataset.dprm, 1);
+  else if (t.dataset.exrm !== undefined) d.dhcpExcl.splice(+t.dataset.exrm, 1);
+  else if (t.id === 'dpAdd') {
+    const nm = v('dpName'), n = v('dpNet'), m = v('dpMask'), g = v('dpGw'), dn = v('dpDns');
+    if (!nm || NS.ip2n(n) === null || NS.maskLen(m) === null || (g && NS.ip2n(g) === null) || (dn && NS.ip2n(dn) === null)) return toast('اكتب اسم الـ pool وNetwork وMask صحيحين', 'bad');
+    d.dhcpPools.push({ name: nm, net: NS.n2ip(NS.net(n, m)), mask: m, gw: g, dns: dn }); msg = 'تمت إضافة الـ pool';
+  } else if (t.id === 'exAdd') {
+    const a = v('exFrom'), b = v('exTo') || a; if (NS.ip2n(a) === null || NS.ip2n(b) === null) return toast('IP غير صالح', 'bad'); d.dhcpExcl.push({ from: a, to: b });
+  } else if (t.id === 'sviAdd') {
+    const n = parseInt(v('sviV'), 10); if (!(n >= 1 && n <= 4094)) return toast('VLAN من 1 إلى 4094', 'bad'); NS.mkSvi(d, n); msg = 'تم إنشاء interface Vlan' + n;
+  } else return;
+  render(); renderCfg(d); openSec(ix); if (msg) toast(msg, 'good');
+});
+
+/* ---------- Services (Server) ---------- */
+function renderSvc(d) {
+  const s = d.svc, pane = $('#pSvc'), opened = [...pane.querySelectorAll('details')].map(x => x.open);
+  const sec = (t, body) => `<details class="sec"><summary>${t}</summary><div class="in">${body}</div></details>`;
+  let h = sec('HTTP / HTTPS', C('HTTP', 'data-p="svc.http.on"', s.http.on) + C('HTTPS', 'data-p="svc.https.on"', s.https.on) + `<label class="lab">index.html<textarea data-p="svc.http.page" rows="4" style="direction:ltr;font:12px var(--mono);background:var(--surface);color:var(--ink);border:1px solid var(--chrome-line);border-radius:5px;padding:8px">${esc(s.http.page)}</textarea></label>`);
+  h += sec('DNS', C('DNS Service', 'data-p="svc.dns.on"', s.dns.on) + (s.dns.records.length ? s.dns.records.map((r, k) => `<div class="rt"><span>${esc(r.name)} → ${r.ip}</span><button class="pbtn" type="button" data-dnsrm="${k}">حذف</button></div>`).join('') : '<p class="msg">مفيش سجلات (A records).</p>') + '<div class="fld">' + T('Name', 'id="dnsN"', '', 'www.test.com') + T('Address', 'id="dnsI"', '', '192.168.1.10', 'decimal') + '</div><button class="btn primary" type="button" id="dnsAdd" style="justify-content:center">Add</button>');
+  const p = s.dhcp.pool;
+  h += sec('DHCP', C('DHCP Service', 'data-p="svc.dhcp.on"', s.dhcp.on) + '<div class="fld">' + T('Default gateway', 'data-p="svc.dhcp.pool.gw" data-v="ip"', p.gw, '', 'decimal') + T('DNS server', 'data-p="svc.dhcp.pool.dns" data-v="ip"', p.dns, '', 'decimal') + T('Start IP', 'data-p="svc.dhcp.pool.start" data-v="ip"', p.start, '192.168.1.100', 'decimal') + T('Subnet mask', 'data-p="svc.dhcp.pool.mask" data-v="mask"', p.mask, '', 'decimal') + T('Max users', 'data-p="svc.dhcp.pool.max" data-v="int"', p.max, '', 'numeric') + '</div><p class="msg">لازم Static IP على السيرفر نفسه. الـ DHCP شغال داخل نفس الشبكة/VLAN.</p>');
+  h += sec('FTP / TFTP', C('FTP', 'data-p="svc.ftp.on"', s.ftp.on) + `<p class="msg">User: ${s.ftp.users.map(u => esc(u.u) + '/' + esc(u.p)).join(', ')}</p>` + C('TFTP', 'data-p="svc.tftp.on"', s.tftp.on) + '<p class="msg">الخدمة بتتفعّل وتتحفظ (إعداد فقط، مفيش نقل ملفات فعلي في النسخة دي).</p>');
+  h += sec('EMAIL', C('Email (SMTP/POP3)', 'data-p="svc.email.on"', s.email.on) + T('Domain', 'data-p="svc.email.domain"', s.email.domain, 'test.com') + '<p class="msg">إعداد فقط (بدون إرسال فعلي).</p>');
+  h += sec('SYSLOG / AAA', C('Syslog', 'data-p="svc.syslog.on"', s.syslog.on) + C('AAA (RADIUS)', 'data-p="svc.aaa.on"', s.aaa.on) + '<p class="msg">إعداد فقط (بدون تسجيل أو مصادقة فعلية).</p>');
+  pane.innerHTML = h; pane.querySelectorAll('details').forEach((x, k) => { if (opened[k] !== undefined) x.open = opened[k]; });
+}
+$('#pSvc').addEventListener('change', e => { const d = NS.dev(winDev); if (!d || !e.target.matches('input,textarea')) return; if (applyField(d, e.target)) { if (e.target.dataset.p === 'svc.dhcp.pool.max') d.svc.dhcp.pool.max = +d.svc.dhcp.pool.max; render(); } });
+$('#pSvc').addEventListener('click', e => {
+  const d = NS.dev(winDev), t = e.target.closest('button'); if (!d || !t) return;
+  if (t.dataset.dnsrm !== undefined) d.svc.dns.records.splice(+t.dataset.dnsrm, 1);
+  else if (t.id === 'dnsAdd') { const n = $('#dnsN').value.trim(), i = $('#dnsI').value.trim(); if (!n || NS.ip2n(i) === null) return toast('اكتب اسم وعنوان IP صحيح', 'bad'); d.svc.dns.records.push({ name: n, ip: i }); toast('تمت إضافة السجل', 'good'); }
+  else return; renderSvc(d); [...$('#pSvc').querySelectorAll('details')][1].open = true;
+});
+
+/* ---------- Desktop (hosts) ---------- */
+function renderDesk(d) {
+  const ic = { ipc: '<rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4M7 9h4M7 12h7"/>', cli: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 10l3 2-3 2M12 15h5"/>', web: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/>', term: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9l3 3-3 3M13 15h4"/>', iot: '<rect x="5" y="3" width="14" height="18" rx="3"/><circle cx="12" cy="10" r="3"/><path d="M9 17h6"/>' };
+  const apps = [['ipc', 'IP Configuration']]; if (NS.hasCli(d)) apps.push(['cli', 'Command Prompt']); if (isBrowser(d)) apps.push(['web', 'Web Browser']); if (d.iot) apps.push(['iot', 'IoT Control']); if (d.ifaces.some(i => i.kind === 'console')) apps.push(['term', 'Terminal (Console)']);
+  $('#pDesk').innerHTML = '<div class="desk">' + apps.map(a => `<button class="app" type="button" data-app="${a[0]}"><svg viewBox="0 0 24 24">${ic[a[0]]}</svg>${a[1]}</button>`).join('') + '</div>';
+  $('#pDesk').querySelectorAll('[data-app]').forEach(b => b.onclick = () => { if (b.dataset.app !== 'term') return showTab(b.dataset.app); const t = NS.consoleTarget(d); if (!t) return toast('وصّل كابل Console من بورت RS232 لبورت Console في الجهاز (والجهازين شغالين)', 'bad'); if (!NS.hasCli(t)) return toast(t.name + ' ملوش CLI', 'bad'); toast('Terminal متصل بـ ' + t.name, 'good'); openWin(t.id, 'cli'); });
+}
+function renderIpc(d) {
+  const i = NS.mainIf(d); if (!i) { $('#pIpc').innerHTML = '<p class="msg">لا يوجد كارت شبكة. ركّب NIC من تبويب Physical.</p>'; return; }
+  const up = NS.linkUp(i), n = esc(i.name);
+  $('#pIpc').innerHTML = `<div class="subbar" style="margin:-12px -12px 12px"><button class="pbtn" type="button" id="ipcBack">رجوع إلى Desktop</button><span>IP Configuration</span></div><p class="msg" style="margin-bottom:10px"><span class="dot ${up ? 'up' : ''}"></span> ${n} · ${up ? 'Link Up' : 'Link Down — ' + esc(NS.whyDown(i))}</p>
+  <div class="fld one"><label class="chk"><input type="radio" name="ipm" id="ipDhcp" ${i.dhcp ? 'checked' : ''}> DHCP</label><label class="chk"><input type="radio" name="ipm" id="ipStat" ${i.dhcp ? '' : 'checked'}> Static</label>
+  ${i.kind === 'wifi' ? `<div class="fld">${T('SSID', `data-if="${n}" data-f="ssid"`, i.wifi.ssid)}${T('Password', `data-if="${n}" data-f="psk"`, i.wifi.psk, 'فاضي = مفتوحة')}</div>` : ''}
+  ${T('IPv4 Address', `data-if="${n}" data-f="ip" ${i.dhcp ? 'readonly' : ''}`, i.ip, '192.168.1.10', 'decimal')}${T('Subnet Mask', `data-if="${n}" data-f="mask" ${i.dhcp ? 'readonly' : ''}`, i.mask, '255.255.255.0', 'decimal')}${T('Default Gateway', 'data-p="gw" data-v="ip"', d.gw, '192.168.1.1', 'decimal')}${T('DNS Server', 'data-p="dns" data-v="ip"', d.dns, '', 'decimal')}</div><p class="msg" id="dhcpMsg" style="margin-top:8px"></p>`;
+  $('#ipcBack').onclick = () => showTab('desk');
+  $('#ipStat').onchange = () => { i.dhcp = false; renderIpc(d); };
+  $('#ipDhcp').onchange = () => { i.dhcp = true; const r = NS.dhcp(d, i); if (r.ok) toast('DHCP: ' + i.ip, 'good'); else { toast(r.msg, 'bad'); } afterEdit(d); const m = $('#dhcpMsg'); if (m && !r.ok) m.textContent = 'DHCP failed: ' + r.msg; };
+}
+$('#pIpc').addEventListener('change', e => { const d = NS.dev(winDev), t = e.target; if (!d || !t.matches('input[type=text]')) return; if (applyField(d, t)) { afterEdit(d); } });
+$('#cliBack').onclick = () => showTab('desk');
+
+/* ---------- Web Browser / IoT ---------- */
+let webLast = {};
+function renderWeb(d) {
+  const w = webLast[d.id] || { url: '', page: '', note: '' };
+  $('#pWeb').innerHTML = `<div class="subbar" style="margin:-12px -12px 12px"><button class="pbtn" type="button" id="webBack">رجوع إلى Desktop</button><span>Web Browser</span></div><form class="web" id="webForm"><div class="fld one">${T('URL', 'id="webUrl"', w.url, 'http://192.168.1.10 أو www.test.com', 'url')}</div><button class="btn primary" type="submit" style="justify-content:center">Go</button><div class="page" id="webPage">${w.err ? '<b style="color:#b00">' + esc(w.err) + '</b>' : w.page || '<span style="color:#777">اكتب عنوان السيرفر واضغط Go. لو استخدمت اسم لازم DNS يكون مضبوط على الجهاز.</span>'}</div></form>`;
+  $('#webBack').onclick = () => showTab('desk');
+  $('#webForm').onsubmit = e => {
+    e.preventDefault(); const u = $('#webUrl').value.trim(), r = NS.httpGet(d, u); webLast[d.id] = { url: u, page: r.ok ? r.page : '', err: r.err };
+    if (r.steps && typeof onPingResult === 'function') onPingResult(d, { trace: r.steps, fail: r.fail || null });
+    renderWeb(d); toast(r.ok ? 'تم تحميل الصفحة من ' + r.server : r.err, r.ok ? 'good' : 'bad');
+  };
+}
+function renderIot(d) {
+  const s = d.iotState || (d.iotState = { temp: 24, on: true }), k = d.iot;
+  $('#pWeb').innerHTML = `<div class="subbar" style="margin:-12px -12px 12px"><button class="pbtn" type="button" id="webBack">رجوع إلى Desktop</button><span>IoT Control · ${esc(k)}</span></div><div class="fld one">${C(k === 'camera' ? 'Streaming' : k === 'controller' ? 'Output ON (إضاءة/قفل)' : 'Sensor Active', 'id="iotOn"', s.on)}${k === 'sensor' ? T('Temperature °C', 'id="iotT"', s.temp, '', 'numeric') : ''}</div><p class="msg" style="margin-top:10px">الجهاز بيرد على الـ ping لما يكون متصل (سلكي FastEthernet0 أو WiFi) وله IP: ${esc(devSub(d) || 'غير محدد')}. اضبط الـ IP من IP Configuration أو DHCP.</p>`;
+  $('#webBack').onclick = () => showTab('desk');
+  $('#iotOn').onchange = e => { s.on = e.target.checked; save(); }; if ($('#iotT')) $('#iotT').onchange = e => { s.temp = +e.target.value || 0; save(); };
+}
+
+/* ---------- CLI ---------- */
+function print(id, t, c) { (logs[id] = logs[id] || []).push({ t, c }); }
+function banner(d) {
+  if (d.type === 'pc') return 'Netlab Command Prompt 1.0\nاكتب help لعرض الأوامر.';
+  if (d.type === 'firewall') return 'Type help or \'?\' for a list of available commands.\n' + d.host + '>';
+  return (d.type === 'router' ? 'Router' : 'Switch') + ' con0 is now available\n\nPress RETURN to get started!\nاكتب ? للمساعدة.';
+}
+function renderCli(d) {
+  if (!logs[d.id]) print(d.id, banner(d), 't-dim');
+  const o = $('#out'); o.innerHTML = '';
+  logs[d.id].forEach(l => { const s = document.createElement('div'); s.textContent = l.t; if (l.c) s.className = l.c; o.appendChild(s); });
+  o.scrollTop = o.scrollHeight; $('#prompt').textContent = NS.prompt(d); renderChips(d);
+}
+function renderChips(d) {
+  let c;
+  const f = d.type === 'router' || d.type === 'firewall' ? NS.dataIfaces(d)[0].name : d.ifaces[0].name;
+  if (d.type === 'pc') c = ['ipconfig /all', 'ipconfig /renew', 'ping ', 'tracert ', 'nslookup ', 'http ', 'arp -a', 'help'];
+  else if (d.mode === 'user') c = ['enable', 'show ip interface brief', 'ping ', '?'];
+  else if (d.mode === 'priv') c = ['configure terminal', 'show ip interface brief', 'show running-config', d.type === 'switch' ? 'show mac address-table' : 'show ip route', d.type === 'switch' ? 'show vlan brief' : 'show arp', 'ping ', 'disable'];
+  else if (d.mode === 'config') c = ['interface ' + f, d.type === 'firewall' ? 'nat outside ' : 'ip route ', d.type !== 'firewall' && d.dhcpPools ? 'ip dhcp pool ' : 'hostname ', d.l3 ? 'ip routing' : 'hostname ', 'end'];
+  else if (d.mode === 'dhcp') c = ['network ', 'default-router ', 'dns-server ', 'exit'];
+  else if (d.type === 'firewall') c = ['nameif ', 'security-level ', 'ip address ', 'no shutdown', 'exit'];
+  else c = d.type === 'router' ? ['ip address ', 'no shutdown', 'clock rate 64000', 'shutdown', 'exit'] : ['switchport access vlan ', 'ip address ', 'no shutdown', 'shutdown', 'exit'];
+  $('#chips').innerHTML = '';
+  c.forEach(x => { const b = document.createElement('button'); b.type = 'button'; b.className = 'chip'; b.textContent = x.trim(); b.onclick = () => { const i = $('#cmdIn'); i.value = x; i.focus(); if (!/\s$/.test(x)) $('#cmdForm').requestSubmit(); }; $('#chips').appendChild(b); });
+}
+$('#cmdForm').addEventListener('submit', e => {
+  e.preventDefault(); const d = NS.dev(winDev); if (!d) return;
+  const inp = $('#cmdIn'), line = inp.value; inp.value = '';
+  print(d.id, NS.prompt(d) + ' ' + line, '');
+  if (line.trim()) { (hist[d.id] = hist[d.id] || []).push(line); hist[d.id].hp = hist[d.id].length; }
+  const r = NS.exec(d, line);
+  if (r.clear) logs[d.id] = [];
+  if (r.out) print(d.id, r.out, /^%[A-Z ]*Invalid|^% Inc|^ERROR|not recognized|الاستخدام|غير صالح|failed|Request could not/.test(r.out) ? 't-err' : '');
+  if (r.trace && typeof onPingResult === 'function') { const q = onPingResult(d, r); if (q) print(d.id, '[Simulation Mode] الحزم بتتحرك تلقائياً. أغلق النافذة وشوفها على الخريطة (أو اضغط Pause وCapture / Forward للخطوة بخطوة).', 't-dim'); }
+  if (r.changed) afterEdit(d);
+  renderCli(d);
+});
+$('#cmdIn').addEventListener('keydown', e => {
+  const d = NS.dev(winDev), h = d && hist[d.id]; if (!h || !h.length || (e.key !== 'ArrowUp' && e.key !== 'ArrowDown')) return;
+  e.preventDefault(); h.hp = Math.max(0, Math.min(h.length, h.hp + (e.key === 'ArrowUp' ? -1 : 1))); e.target.value = h[h.hp] || '';
+});
+$('#wClose').onclick = closeWin;
+$('#win').addEventListener('pointerdown', e => { if (e.target.id === 'win' && window.innerWidth > 480) closeWin(); });
+addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#win').hidden && !document.querySelector('dialog[open]')) closeWin(); });
+/* ===== UI 3: palette, Realtime / Simulation, PDU list, event list, dialogs, boot ===== */
+let mode = 'rt', cat = 'net', pdus = [], pduNum = 0, simQ = [], simRows = [], simT = 0, simBusy = false, simPlay = false, simTok = 0, simTimer = 0;
+
+/* ---------- palette ---------- */
+const cabLine = (st, extra) => `<path d="M-24 14L24 -14" stroke="${st}" stroke-width="3" stroke-linecap="round" ${extra || ''}/>`;
+const cabIcon = c => `<svg viewBox="-34 -30 68 56" aria-hidden="true">` + ({
+  auto: '<path d="M6 -22L-12 4h12l-4 20L16 -6H4z" fill="var(--warn)" stroke="var(--ink)" stroke-width="1.4" stroke-linejoin="round"/>',
+  console: cabLine('var(--accent)'),
+  straight: cabLine('var(--ink)'),
+  cross: cabLine('var(--ink)', 'stroke-dasharray="7 5"'),
+  fiber: cabLine('var(--warn)'),
+  'serial-dce': cabLine('var(--bad)', '') + '<circle cx="-24" cy="14" r="4" fill="var(--bad)"/>',
+  'serial-dte': cabLine('var(--bad)', 'stroke-dasharray="9 3"'),
+  coax: cabLine('#8a5a2b'),
+  phone: cabLine('var(--ink)', 'stroke-dasharray="1.5 6"')
+})[c] + '</svg>';
+const CABS = [
+  { cable: 'auto', label: 'Auto', desc: 'Automatically Choose Connection Type: يختار نوع الكابل الصح وأول بورتين فاضيين.' },
+  { cable: 'console', label: 'Console', desc: 'Console: من RS232 في الـ PC لبورت Console في الراوتر/السويتش/ASA، وبعدها افتح Terminal من الـ PC.' },
+  { cable: 'straight', label: 'Straight', desc: 'Copper Straight-Through: بين أجهزة مختلفة النوع (PC ↔ Switch، Router ↔ Switch).' },
+  { cable: 'cross', label: 'Cross-Over', desc: 'Copper Cross-Over: بين أجهزة من نفس النوع (Switch ↔ Switch، PC ↔ Router).' },
+  { cable: 'fiber', label: 'Fiber', desc: 'Fiber: بين بورتات Fiber فقط (SFP / موديول Fiber).' },
+  { cable: 'serial-dce', label: 'Serial DCE', desc: 'Serial DCE: الطرف الأول DCE (لازم clock rate عليه)، والتاني DTE.' },
+  { cable: 'serial-dte', label: 'Serial DTE', desc: 'Serial DTE: الطرف الأول DTE والتاني DCE (clock rate على التاني).' },
+  { cable: 'coax', label: 'Coaxial', desc: 'Coaxial: بين بورتات Coaxial (Cable Modem، Splitter، Cloud).' },
+  { cable: 'phone', label: 'Phone', desc: 'Phone: خط تليفون بين بورتات Phone (DSL Modem، Cloud، NIC Modem).' }
+];
+const TOPS = { net: { title: 'Network Devices', subs: [['routers', 'Routers'], ['switches', 'Switches'], ['hubs', 'Hubs'], ['wireless', 'Wireless'], ['security', 'Security'], ['wan', 'WAN Emulation']] }, end: { title: 'End Devices', subs: [['users', 'Users'], ['servers', 'Servers'], ['voice', 'Phone / Printer'], ['iot', 'Smart Home / IoT']] }, con: { title: 'Connections', subs: [] } };
+let sub = { net: 'routers', end: 'users', con: '' };
+function catItems(c) { return c === 'con' ? CABS : Object.keys(NS.MODELS).filter(k => NS.MODELS[k].sub === sub[c]).map(k => ({ model: k, label: NS.MODELS[k].label, desc: NS.MODELS[k].desc })); }
+function refreshPalette() {
+  document.querySelectorAll('.pcat').forEach(b => b.setAttribute('aria-selected', b.dataset.cat === cat));
+  const sb = $('#pSubs'); sb.innerHTML = ''; sb.hidden = !TOPS[cat].subs.length;
+  TOPS[cat].subs.forEach(([k, l]) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'psub'; b.textContent = l; b.setAttribute('aria-selected', sub[cat] === k); b.onclick = () => { sub[cat] = k; refreshPalette(); }; sb.appendChild(b); });
+  const box = $('#pItems'); box.innerHTML = ''; let nm = TOPS[cat].title;
+  catItems(cat).forEach(it => {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'pit';
+    const on = it.model ? (tool === 'place' && placing && placing.model === it.model) : (tool === 'cable' && cableType === it.cable);
+    b.setAttribute('aria-pressed', on); b.innerHTML = (it.model ? iconSvg(it.model) : cabIcon(it.cable)) + '<span>' + it.label + '</span>';
+    if (on) nm = it.desc;
+    b.onclick = () => {
+      if (on) return setTool('select');
+      if (it.model) { setTool('place'); placing = { model: it.model }; updateHint(); }
+      else { cableType = it.cable; setTool('cable'); }
+      refreshPalette();
+    };
+    box.appendChild(b);
+  });
+  $('#pName').textContent = nm;
+}
+document.querySelectorAll('.pcat').forEach(b => b.onclick = () => { cat = b.dataset.cat; refreshPalette(); });
+document.querySelectorAll('[data-tool]').forEach(b => b.onclick = () => setTool(tool === b.dataset.tool && b.dataset.tool !== 'select' ? 'select' : b.dataset.tool));
+$('#bFit').onclick = fit;
+let clearT = 0;
+$('#bClear').onclick = () => { if (Date.now() - clearT < 3000) { clearT = 0; return loadAndShow(() => NS.fresh()); } clearT = Date.now(); toast('اضغط تاني خلال 3 ثواني لمسح كل الشبكة'); };
+
+/* ---------- mode switch ---------- */
+function setMode(m) {
+  mode = m; stopPlay(); simTok++; gPkt.innerHTML = '';
+  document.querySelectorAll('[data-mode]').forEach(b => b.setAttribute('aria-pressed', b.dataset.mode === m));
+  renderPanel(); requestAnimationFrame(fit);
+  toast(m === 'sim' ? 'Simulation Mode: الحزم هتتلتقط في Event List' : 'Realtime Mode', '');
+}
+document.querySelectorAll('[data-mode]').forEach(b => b.onclick = () => setMode(b.dataset.mode));
+
+/* ---------- panel ---------- */
+const stLabel = { none: ['—', ''], ok: ['Successful', 'st-ok'], fail: ['Failed', 'st-no'], run: ['In progress', 'st-run'] };
+function renderPanel() {
+  const H = $('#panelH'), B = $('#panelB');
+  if (mode === 'rt') {
+    H.innerHTML = '<b>Scenario 0</b><span class="sub">PDU List</span><button class="pbtn" type="button" id="pNew">New</button><button class="pbtn" type="button" id="pDel"' + (pdus.length ? '' : ' disabled') + '>Delete</button>';
+    let t = '<table class="tbl"><thead><tr><th>Status</th><th>Source</th><th>Destination</th><th>Type</th><th>Num</th><th></th></tr></thead><tbody>';
+    t += pdus.length ? pdus.map(p => { const s = stLabel[p.status], a = NS.dev(p.src), b = NS.dev(p.dst); return `<tr><td><span class="${s[1]}">${s[0]}</span></td><td>${a ? esc(a.name) : '?'}</td><td>${b ? esc(b.name) : '?'} (${p.ip})</td><td>ICMP</td><td>${p.num}</td><td><button class="pbtn" type="button" data-fire="${p.num}">Fire</button></td></tr>`; }).join('') : '<tr><td colspan="6" class="empty">مفيش PDUs. اضغط New (أو أداة الظرف) ثم اختر جهازين.</td></tr>';
+    B.innerHTML = t + '</tbody></table>';
+    $('#pNew').onclick = () => setTool('pdu'); $('#pDel').onclick = () => { pdus = []; renderPanel(); };
+    B.querySelectorAll('[data-fire]').forEach(x => x.onclick = () => firePdu(pdus.find(p => p.num === +x.dataset.fire)));
+  } else {
+    H.innerHTML = `<b>Event List</b><span class="sub">${simQ.length ? 'منتظر: ' + simQ.length : ''}</span><button class="pbtn" type="button" id="sReset">Reset</button><button class="pbtn" type="button" id="sStep"${simQ.length && !simBusy ? '' : ' disabled'}>Capture / Forward</button><button class="pbtn${simPlay ? ' on' : ''}" type="button" id="sPlay"${simQ.length || simPlay ? '' : ' disabled'}>${simPlay ? 'Pause' : 'Play'}</button>`;
+    let t = '<table class="tbl"><thead><tr><th>Vis. Time</th><th>Last Device</th><th>At Device</th><th>Type</th></tr></thead><tbody>';
+    t += simRows.length ? simRows.map((r, k) => `<tr class="ev" data-ev="${k}"><td>${r.t}</td><td>${r.last}</td><td>${r.at}</td><td><span class="sw" style="background:${r.fail ? 'var(--bad)' : r.dir === 'rep' ? 'var(--good)' : 'var(--accent)'}"></span>${r.type}</td></tr>`).join('') : '<tr><td colspan="4" class="empty">مفيش أحداث. اعمل ping من CLI أو أرسل PDU، وبعدين اضغط Capture / Forward.</td></tr>';
+    B.innerHTML = t + '</tbody></table>'; B.scrollTop = B.scrollHeight;
+    $('#sReset').onclick = simReset; $('#sStep').onclick = () => stepOne(); $('#sPlay').onclick = () => simPlay ? stopPlay() : startPlay();
+    B.querySelectorAll('[data-ev]').forEach(x => x.onclick = () => showEvent(simRows[+x.dataset.ev]));
+  }
+}
+
+/* ---------- PDUs and pings ---------- */
+function createPdu(s, d) {
+  const di = NS.ipIfs(d).find(i => i.ip); if (!di) return toast(d.name + ' لا يملك IP', 'bad');
+  const p = { num: ++pduNum, src: s.id, dst: d.id, ip: di.ip, status: 'none' }; pdus.push(p); firePdu(p);
+}
+function firePdu(p) {
+  if (!p) return; const s = NS.dev(p.src), d = NS.dev(p.dst);
+  if (!s || !d) { p.status = 'fail'; return renderPanel(); }
+  const r = NS.ping(s, p.ip);
+  if (mode === 'rt') { p.status = r.ok ? 'ok' : 'fail'; renderPanel(); toast(r.ok ? 'Successful: الحزمة وصلت والرد رجع' : 'Failed: ' + r.fail.msg, r.ok ? 'good' : 'bad'); }
+  else { p.status = 'run'; queueEvents(r.steps, r.ok ? null : r.fail, p); }
+}
+/* called from the CLI after ping / tracert; returns true when packets were queued */
+function onPingResult(d, r) { if (mode !== 'sim') return false; queueEvents(r.trace, r.fail, null); return true; }
+
+function queueEvents(steps, fail, pdu) {
+  if (!simQ.length && !simBusy) { gPkt.innerHTML = ''; }
+  steps.forEach(s => simQ.push({ from: s.from, to: s.to, dir: s.dir || 'req', srcIp: s.srcIp, dstIp: s.dstIp, ttl: s.ttl, pdu }));
+  if (fail) simQ.push({ fail: true, at: fail.at.id, msg: fail.msg, pdu, dir: 'x' });
+  else if (simQ.length) simQ[simQ.length - 1].last = true;
+  if (!steps.length && !fail && pdu) { pdu.status = 'ok'; }
+  renderPanel();
+  if (mode === 'sim' && simQ.length && !simPlay && !simBusy) startPlay();
+}
+function simReset() { stopPlay(); simTok++; simQ = []; simRows = []; simT = 0; simBusy = false; gPkt.innerHTML = ''; pdus.forEach(p => { if (p.status === 'run') p.status = 'none'; }); renderPanel(); }
+function stopPlay() { simPlay = false; clearTimeout(simTimer); if (mode === 'sim') { const b = $('#sPlay'); if (b) renderPanel(); } }
+function startPlay() { simPlay = true; renderPanel(); stepOne(); }
+
+function envelope(color) {
+  const g = document.createElementNS(SVGNS, 'g');
+  g.innerHTML = `<rect class="env-rect" x="-11" y="-8" width="22" height="16" rx="3" fill="${color}"/><path class="env-line" d="M-8 -4.5l8 6 8-6"/>`; return g;
+}
+function badge(dev, ok, msg) {
+  const m = document.createElementNS(SVGNS, 'g'); m.setAttribute('transform', `translate(${dev.x + 24} ${dev.y - 28})`);
+  m.innerHTML = ok ? '<circle r="11" fill="var(--good)" class="env-rect"/><path d="M-5 0l3.5 4 6-7" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>' : '<circle r="11" fill="var(--bad)" class="env-rect"/><path d="M-4 -4L4 4M4 -4L-4 4" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/>';
+  gPkt.appendChild(m);
+}
+function stepOne() {
+  if (simBusy || !simQ.length) { if (!simQ.length) stopPlay(); return; }
+  const ev = simQ.shift(), tok = simTok; simBusy = true; simT += 0.001;
+  const row = { t: simT.toFixed(3), type: 'ICMP', dir: ev.dir, ev };
+  const done = () => {
+    if (tok !== simTok) return; simBusy = false; simRows.push(row);
+    if (ev.pdu && (ev.last || ev.fail)) ev.pdu.status = ev.fail ? 'fail' : 'ok';
+    renderPanel();
+    if (ev.last) { const d = NS.dev(ev.to); if (d) badge(d, true); toast('Successful: الحزمة وصلت والرد رجع', 'good'); }
+    if (simPlay) { if (simQ.length) simTimer = setTimeout(stepOne, 450); else stopPlay(); }
+  };
+  if (ev.fail) {
+    const d = NS.dev(ev.at); row.last = '—'; row.at = d ? esc(d.name) : '?'; row.fail = true; row.type = 'ICMP (Failed)';
+    if (d) badge(d, false); toast(ev.msg, 'bad'); return done();
+  }
+  const a = NS.dev(ev.from), b = NS.dev(ev.to); if (!a || !b) { simBusy = false; return stepOne(); }
+  row.last = esc(a.name); row.at = esc(b.name);
+  gPkt.querySelectorAll('g').forEach(g => g.remove());
+  const env = envelope(ev.dir === 'rep' ? 'var(--good)' : 'var(--accent)'); gPkt.appendChild(env);
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches, t0 = performance.now(), D = reduce ? 1 : 560;
+  const tick = t => { if (tok !== simTok) return; const p = Math.min(1, (t - t0) / D); env.setAttribute('transform', `translate(${a.x + (b.x - a.x) * p} ${a.y + (b.y - a.y) * p})`); p < 1 ? requestAnimationFrame(tick) : done(); };
+  env.setAttribute('transform', `translate(${a.x} ${a.y})`); requestAnimationFrame(tick);
+}
+function showEvent(r) {
+  if (!r) return; const ev = r.ev, at = NS.dev(ev.fail ? ev.at : ev.to); const rows = [];
+  rows.push(['At Device', at ? at.name : '?']);
+  if (ev.fail) { rows.push(['Result', 'Dropped']); rows.push(['Reason', ev.msg]); }
+  else {
+    const last = NS.dev(ev.from); rows.push(['Last Device', last ? last.name : '?']);
+    rows.push(['Type', ev.dir === 'rep' ? 'ICMP Echo Reply' : 'ICMP Echo Request']);
+    rows.push(['Layer 3 · Src IP', ev.srcIp || '—']); rows.push(['Layer 3 · Dst IP', ev.dstIp || '—']); rows.push(['TTL', ev.ttl || '—']);
+    const note = !at ? '' : at.type === 'router' || at.type === 'firewall' || (at.type === 'switch' && at.routing) ? 'Layer 3: بحث في Routing Table ثم تمرير الحزمة (TTL-1)' + (at.type === 'firewall' ? ' + فحص security-level' : '') : at.type === 'switch' ? 'Layer 2: بحث في MAC Table وتمرير داخل نفس الـ VLAN' : at.type === 'hub' ? 'Layer 1: الـ Hub بيبث الإشارة لكل البورتات' : at.type === 'ap' ? 'Wireless: تحويل بين الـ WiFi والشبكة السلكية' : (ev.last ? 'الحزمة وصلت للوجهة' : 'استقبال على الـ NIC ومعالجة');
+    rows.push(['Layer 2', note]);
+  }
+  $('#pduTitle').textContent = 'PDU Information'; $('#pduInfo').innerHTML = rows.map(x => `<tr><td>${esc(x[0])}</td><td>${esc(String(x[1]))}</td></tr>`).join('');
+  $('#dlgPdu').showModal();
+}
+
+/* ---------- dialogs ---------- */
+document.querySelectorAll('[data-close]').forEach(b => b.onclick = () => b.closest('dialog').close());
+function loadAndShow(fn) { closeWin(); simReset(); pdus = []; pduNum = 0; Object.keys(logs).forEach(k => delete logs[k]); tool = 'select'; placing = null; pendingCable = null; pduSrc = null; fn(); setTool('select'); renderPanel(); requestAnimationFrame(fit); }
+$('#bScn').onclick = () => {
+  const l = $('#scList'); l.innerHTML = '';
+  Object.keys(NS.scenarios).forEach(k => { const s = NS.scenarios[k], b = document.createElement('button'); b.type = 'button'; b.className = 'btn sc'; b.innerHTML = '<b>' + esc(s.name) + '</b><span>' + esc(s.desc) + '</span>'; b.onclick = () => { $('#dlgScn').close(); loadAndShow(() => NS.loadScenario(k)); toast(s.name, 'good'); }; l.appendChild(b); });
+  $('#dlgScn').showModal();
+};
+$('#bCheat').onclick = () => $('#dlgCheat').showModal();
+$('#bSave').onclick = () => { $('#saveTxt').value = NS.serialize(); $('#dlgSave').showModal(); };
+$('#bCopy').onclick = () => { const t = $('#saveTxt'); t.select(); (navigator.clipboard ? navigator.clipboard.writeText(t.value) : Promise.reject()).then(() => toast('تم النسخ', 'good'), () => toast('حدّد النص ينسخ يدوياً')); };
+$('#bLoad').onclick = () => { try { const t = $('#saveTxt').value; JSON.parse(t); $('#dlgSave').close(); loadAndShow(() => NS.load(t)); toast('تم تحميل الشبكة', 'good'); } catch (e) { toast('النص غير صالح: ' + e.message, 'bad'); } };
+$('#bHelp').onclick = () => $('#dlgWelcome').showModal();
+$('#dlgWelcome').addEventListener('close', () => { try { localStorage.setItem('netlab-welcome4', '1'); } catch (e) { } });
+$('#wlScn').onclick = () => { $('#dlgWelcome').close(); loadAndShow(() => NS.loadScenario('city')); toast('اضغط Bank-PC1 ثم Desktop ثم Command Prompt، واكتب ping 192.168.2.10', 'good'); };
+$('#wlEmpty').onclick = () => { $('#dlgWelcome').close(); loadAndShow(() => NS.fresh()); };
+addEventListener('resize', () => requestAnimationFrame(fit));
+
+/* ---------- Traffic demo (one-tap ping with animation) ---------- */
+function fitDevs(ids) {
+  const ds = ids.map(NS.dev).filter(Boolean); if (!ds.length) return; const W = svg.clientWidth, H = svg.clientHeight, pad = 90;
+  const xs = ds.map(d => d.x), ys = ds.map(d => d.y), x0 = Math.min(...xs) - pad, x1 = Math.max(...xs) + pad, y0 = Math.min(...ys) - pad, y1 = Math.max(...ys) + pad;
+  view.k = Math.min(1.4, W / (x1 - x0), H / (y1 - y0)); view.x = W / 2 - (x0 + x1) / 2 * view.k; view.y = H / 2 - (y0 + y1) / 2 * view.k; applyView();
+}
+$('#bTraffic').onclick = () => {
+  const ds = NS.state.devices.filter(d => NS.canOriginate(d) && NS.ipIfs(d).some(i => i.ip));
+  if (ds.length < 2) return toast('محتاج جهازين على الأقل ليهم IP', 'bad');
+  const opt = (d, sel) => `<option value="${d.id}" ${sel ? 'selected' : ''}>${esc(d.name)} (${esc(devSub(d))})</option>`, byName = n => ds.find(d => d.name === n);
+  const a = byName('Bank-PC1') || ds[0], b = byName('Telecom-PC1') || ds.find(d => d !== a);
+  $('#trFrom').innerHTML = ds.map(d => opt(d, d === a)).join(''); $('#trTo').innerHTML = ds.map(d => opt(d, d === b)).join('');
+  $('#dlgTraffic').showModal();
+};
+$('#trGo').onclick = () => {
+  const s = NS.dev($('#trFrom').value), d = NS.dev($('#trTo').value); if (!s || !d || s === d) return toast('اختار جهازين مختلفين', 'bad');
+  const ip = NS.ipIfs(d).find(i => i.ip).ip; $('#dlgTraffic').close(); closeWin();
+  setMode('sim'); simReset(); const r = NS.ping(s, ip); const ids = new Set([s.id, d.id]); r.steps.forEach(x => { ids.add(x.from); ids.add(x.to); }); const ids2 = [...ids]; setTimeout(() => fitDevs(ids2), 60);
+  const p = { num: ++pduNum, src: s.id, dst: d.id, ip, status: 'run' }; pdus.push(p); queueEvents(r.steps, r.ok ? null : r.fail, p);
+};
+
+/* ---------- Physical View ---------- */
+let pv = { on: false, lv: 'city', b: 0, c: 0 };
+const loc = d => Object.assign({ b: 0, c: 0 }, d.loc);
+const RACKABLE = ['router', 'switch', 'firewall', 'modem', 'cloud'];
+function renderView() {
+  const box = $('#vw'); box.hidden = !pv.on; $('#bView').textContent = pv.on ? 'Physical' : 'Logical'; $('#bView').setAttribute('aria-pressed', pv.on);
+  if (!pv.on) return;
+  const ds = NS.state.devices, crumbs = [['city', 'City']]; if (pv.lv !== 'city') crumbs.push(['building', 'Building ' + (pv.b + 1)]); if (pv.lv === 'closet' || pv.lv === 'rack') crumbs.push(['closet', 'Wiring Closet ' + (pv.c + 1)]); if (pv.lv === 'rack') crumbs.push(['rack', 'Rack']);
+  let h = '<div class="crumbs">' + crumbs.map(c => `<button class="pbtn" type="button" data-lv="${c[0]}">${c[1]}</button>`).join('') + '</div><svg viewBox="0 0 360 300" preserveAspectRatio="xMidYMid meet">';
+  if (pv.lv === 'city') {
+    h += '<rect x="0" y="230" width="360" height="70" fill="color-mix(in srgb,var(--good) 18%,var(--work))"/><path d="M0 250h360" stroke="var(--muted)" stroke-dasharray="6 6"/>';
+    [0, 1, 2].forEach(b => { const n = ds.filter(d => loc(d).b === b).length, x = 25 + b * 112, ht = 90 + b * 25; h += `<g data-b="${b}" style="cursor:pointer"><rect class="vbox" x="${x}" y="${230 - ht}" width="90" height="${ht}" rx="4"/>${[0, 1, 2, 3].map(k => `<rect x="${x + 12 + (k % 2) * 36}" y="${230 - ht + 14 + Math.floor(k / 2) * 26}" width="18" height="14" fill="var(--accent)" opacity=".35"/>`).join('')}<text class="vtxt" x="${x + 45}" y="252">Building ${b + 1}</text><text class="vsub" x="${x + 45}" y="268">${n} devices</text></g>`; });
+  } else if (pv.lv === 'building') {
+    h += `<rect class="vbox" x="20" y="14" width="320" height="270" rx="6" style="cursor:default"/><text class="vtxt" x="180" y="38">Building ${pv.b + 1}</text>`;
+    [0, 1].forEach(c => { const n = ds.filter(d => loc(d).b === pv.b && loc(d).c === c).length, x = 40 + c * 150; h += `<g data-c="${c}" style="cursor:pointer"><rect class="vbox" x="${x}" y="70" width="130" height="150" rx="4" fill="var(--work)"/><path d="M${x + 20} 100h90M${x + 20} 130h90M${x + 20} 160h90" stroke="var(--muted)" stroke-width="3"/><text class="vtxt" x="${x + 65}" y="244">Wiring Closet ${c + 1}</text><text class="vsub" x="${x + 65}" y="260">${n} devices</text></g>`; });
+  } else {
+    const here = ds.filter(d => loc(d).b === pv.b && loc(d).c === pv.c), rk = here.filter(d => RACKABLE.includes(d.type)), other = here.filter(d => !RACKABLE.includes(d.type));
+    if (pv.lv === 'closet') {
+      h += `<text class="vtxt" x="180" y="30">Wiring Closet ${pv.c + 1}</text><g data-rack="1" style="cursor:pointer"><rect class="vbox" x="30" y="50" width="120" height="220" rx="4"/><text class="vtxt" x="90" y="170">Rack 1</text><text class="vsub" x="90" y="188">${rk.length} units</text></g>`;
+      h += other.slice(0, 8).map((d, k) => `<g transform="translate(${215 + (k % 3) * 52} ${80 + Math.floor(k / 3) * 70}) scale(.7)">${glyph(d)}<text class="vsub" y="34">${esc(d.name)}</text></g>`).join('') + (other.length ? '' : '<text class="vsub" x="250" y="150">لا توجد أجهزة طرفية هنا</text>');
+    } else {
+      h += `<text class="vtxt" x="180" y="26">Rack 1 · Wiring Closet ${pv.c + 1}</text><rect x="70" y="40" width="220" height="${Math.max(80, rk.length * 38 + 16)}" rx="4" fill="var(--chrome)" stroke="var(--ink)" stroke-width="2"/>`;
+      rk.forEach((d, k) => { const y = 50 + k * 38, up = d.ifaces.filter(i => NS.linkUp(i)).length; h += `<g data-open="${d.id}" style="cursor:pointer"><rect class="vbox" x="80" y="${y}" width="200" height="32" rx="3"/><text class="vtxt" x="180" y="${y + 14}">${esc(d.name)} · ${esc(modelLabel(d))}</text><text class="vsub" x="180" y="${y + 26}">${up}/${NS.dataIfaces(d).length} ports up · ${d.off ? 'OFF' : 'ON'}</text></g>`; });
+      if (!rk.length) h += '<text class="vsub" x="180" y="84">الراك فاضي. حدّد Location للجهاز من تبويب Physical.</text>';
+    }
+  }
+  box.innerHTML = h + '</svg>';
+}
+$('#vw').addEventListener('click', e => {
+  const t = e.target.closest('[data-lv],[data-b],[data-c],[data-rack],[data-open]'); if (!t) return;
+  if (t.dataset.lv) pv.lv = t.dataset.lv; else if (t.dataset.b !== undefined) { pv.b = +t.dataset.b; pv.lv = 'building'; } else if (t.dataset.c !== undefined) { pv.c = +t.dataset.c; pv.lv = 'closet'; } else if (t.dataset.rack) pv.lv = 'rack'; else if (t.dataset.open) return openWin(t.dataset.open);
+  renderView();
+});
+$('#bView').onclick = () => { pv.on = !pv.on; if (pv.on) pv.lv = 'city'; renderView(); toast(pv.on ? 'Physical View: City ← Building ← Wiring Closet ← Rack. غيّر مكان الجهاز من تبويب Physical' : 'Logical View'); };
+
+/* ---------- Multiuser ---------- */
+$('#bMulti').onclick = () => { $('#multiTxt').value = NS.serialize(); $('#dlgMulti').showModal(); };
+$('#mCopy').onclick = () => { const t = $('#multiTxt'); t.value = NS.serialize(); t.select(); (navigator.clipboard ? navigator.clipboard.writeText(t.value) : Promise.reject()).then(() => toast('تم نسخ كود شبكتك', 'good'), () => toast('حدّد النص وانسخه يدوياً')); };
+$('#mMerge').onclick = () => { try { const n = NS.merge($('#multiTxt').value); $('#dlgMulti').close(); render(); renderView(); requestAnimationFrame(fit); toast('تم دمج ' + n + ' جهاز من المستخدم الآخر على يمين شبكتك', 'good'); } catch (e) { toast('الكود غير صالح: ' + e.message, 'bad'); } };
+
+/* ---------- boot ---------- */
+initGrid();
+let restored = false;
+try { const s = localStorage.getItem('netlab-v4'); if (s) { NS.load(s); restored = NS.state.devices.length > 0; } } catch (e) { restored = false; }
+if (!restored) NS.loadScenario('city');
+refreshPalette(); renderPanel(); render(); renderView(); requestAnimationFrame(fit);
+try { if (!localStorage.getItem('netlab-welcome4')) setTimeout(() => $('#dlgWelcome').showModal(), 200); } catch (e) { }
+</script>
