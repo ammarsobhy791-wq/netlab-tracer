@@ -182,6 +182,28 @@ dialog::backdrop { background: rgba(5, 10, 16, .55); }
 .cheat pre { margin: 8px 0 0; font: 12px/1.6 var(--mono); direction: ltr; text-align: left; white-space: pre-wrap; }
 @media (prefers-reduced-motion: reduce) { .pulse { animation: none; } .toast { transition: none; } }
 @media (max-width: 480px) { .titlebar h1 small { display: none; } .tb-btn .lb { display: none; } .wtab { padding: 8px 10px; } .fld.three { grid-template-columns: 1fr 1fr; } .overlay { padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px); place-items: stretch; } .win { width: 100%; height: 100%; border-radius: 0; } }
+/* v4 additions */
+.toolbar { overflow-x: auto; scrollbar-width: none; } .tool-lbl { display: none; }
+.cab.console { stroke: var(--accent); stroke-dasharray: 2 0; stroke-width: 2.6; opacity: .85; }
+.cab.serial { stroke: var(--bad); stroke-width: 2.4; }
+.cab.coax { stroke: #8a5a2b; stroke-width: 3.2; }
+.cab.phone { stroke: var(--ink); stroke-dasharray: 1.5 4.5; stroke-width: 2.8; }
+.cab.wireless, .cab.wl { stroke: var(--accent); stroke-dasharray: 3 5; stroke-width: 1.8; opacity: .8; }
+.psubs { display: flex; gap: 4px; padding: 4px 6px 0; overflow-x: auto; scrollbar-width: none; }
+.psub { flex: none; padding: 4px 9px; border: 1px solid var(--chrome-line); border-radius: 12px; background: var(--pal-item); font-size: 11px; color: var(--ink); }
+.psub[aria-selected="true"] { background: var(--accent); color: #fff; border-color: var(--accent); }
+.mod { display: grid; grid-template-columns: auto 1fr; gap: 8px; align-items: center; margin-bottom: 8px; font-size: 12.5px; }
+.mod select, .sel select, select.fs { background: var(--surface); color: var(--ink); border: 1px solid var(--chrome-line); border-radius: 5px; padding: 8px; font: 13px var(--mono); width: 100%; min-width: 0; direction: ltr; }
+.svcgrid { display: grid; gap: 8px; }
+.web { display: grid; gap: 8px; padding: 12px; }
+.web .page { border: 1px solid var(--line); border-radius: 6px; background: #fff; color: #111; padding: 10px; min-height: 90px; font-size: 13px; direction: ltr; text-align: left; }
+.vw { position: absolute; inset: 0; display: grid; grid-template-rows: auto 1fr; background: var(--work); }
+.vw .crumbs { display: flex; gap: 6px; padding: 8px; flex-wrap: wrap; border-bottom: 1px solid var(--line); background: var(--chrome); direction: ltr; }
+.vw svg { width: 100%; height: 100%; }
+.vbox { fill: color-mix(in srgb, var(--accent) 10%, var(--work)); stroke: var(--accent); stroke-width: 1.6; cursor: pointer; }
+.vtxt { direction: ltr; font: 600 12px var(--font); fill: var(--ink); text-anchor: middle; pointer-events: none; }
+.vsub { direction: ltr; font: 10px var(--font); fill: var(--muted); text-anchor: middle; pointer-events: none; }
+.tool.wide { width: auto; padding: 0 10px; font-size: 11.5px; font-weight: 600; }
 </style>
 <div id="app" dir="rtl" lang="ar">
   <header class="titlebar">
@@ -200,6 +222,8 @@ dialog::backdrop { background: rgba(5, 10, 16, .55); }
     <span class="tool-sep"></span>
     <button class="tool" type="button" id="bFit" title="Fit" aria-label="ملاءمة"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
     <button class="tool" type="button" id="bClear" title="New" aria-label="شبكة جديدة"><svg viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6zM14 3v4h4M12 11v6M9 14h6"/></svg></button>
+    <button class="tool wide" type="button" id="bView" aria-pressed="false" title="Logical / Physical">Logical</button>
+    <button class="tool wide" type="button" id="bMulti" title="Multiuser">Multiuser</button>
     <span class="tool-lbl" id="toolLbl"></span>
   </div>
 
@@ -207,6 +231,7 @@ dialog::backdrop { background: rgba(5, 10, 16, .55); }
     <svg id="cv" role="img" aria-label="مخطط الشبكة">
       <g id="world"><g id="gGrid"></g><g id="gLinks"></g><g id="gDev"></g><g id="gPkt"></g></g>
     </svg>
+    <div class="vw" id="vw" hidden></div>
     <div class="toast" id="toast" role="status"></div>
     <div class="hint" id="hint"></div>
   </div>
@@ -226,6 +251,7 @@ dialog::backdrop { background: rgba(5, 10, 16, .55); }
         <button type="button" data-mode="sim" aria-pressed="false">Simulation</button>
       </div>
     </div>
+    <div class="psubs" id="pSubs"></div>
     <div class="pitems" id="pItems"></div>
     <div class="pname" id="pName"></div>
   </footer>
@@ -244,6 +270,8 @@ dialog::backdrop { background: rgba(5, 10, 16, .55); }
           <form class="cmd" id="cmdForm" autocomplete="off"><label id="prompt" for="cmdIn"></label><input id="cmdIn" type="text" inputmode="text" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="أمر"><button type="submit">أرسل</button></form>
         </div>
         <div class="wp" id="pDesk" hidden></div>
+        <div class="wp" id="pSvc" hidden></div>
+        <div class="wp" id="pWeb" hidden></div>
         <div class="wp" id="pIpc" hidden></div>
       </div>
     </div>
@@ -301,6 +329,33 @@ interface fastethernet0/2
  end
 show vlan brief
 show mac address-table</pre></details>
+    <details><summary>PC: DHCP / DNS / Web</summary><pre>ipconfig /renew
+nslookup www.netlab.com
+ping www.netlab.com
+http www.netlab.com</pre></details>
+    <details><summary>Serial / WAN (راوتر)</summary><pre>interface serial0/0/0
+ ip address 10.0.0.1 255.255.255.252
+ clock rate 64000
+ no shutdown</pre></details>
+    <details><summary>Layer 3 Switch (3560/3650)</summary><pre>configure terminal
+ip routing
+interface vlan 10
+ ip address 10.1.1.1 255.255.255.0
+ no shutdown</pre></details>
+    <details><summary>DHCP على الراوتر</summary><pre>ip dhcp excluded-address 192.168.1.1 192.168.1.10
+ip dhcp pool LAN1
+ network 192.168.1.0 255.255.255.0
+ default-router 192.168.1.1
+ dns-server 8.8.8.8</pre></details>
+    <details><summary>ASA Firewall</summary><pre>enable
+configure terminal
+interface gigabitethernet1/1
+ nameif outside
+ security-level 0
+ ip address 200.0.0.1 255.255.255.0
+ no shutdown
+ exit
+icmp permit any</pre></details>
     <details><summary>أوامر الفحص</summary><pre>show ip interface brief
 show running-config
 show arp
@@ -308,16 +363,18 @@ ping &lt;ip&gt;
 traceroute &lt;ip&gt;</pre></details>
     <button class="btn" type="button" data-close>إغلاق</button></div></dialog>
 
+  <dialog id="dlgMulti"><div class="dlg"><h3>Multiuser · مشاركة الشبكة</h3><p class="msg">GitHub Pages صفحة ثابتة (مفيش سيرفر)، فالـ Multiuser هنا بيتم بكود مشاركة: انسخ كود شبكتك وابعته لصاحبك، وهو يلصق كودك ويدمجه في شبكته (أو العكس). الأجهزة المدمجة بتظهر على يمين شبكتك.</p><textarea id="multiTxt" rows="7" spellcheck="false" style="width:100%;direction:ltr;font:11px var(--mono)"></textarea><div class="row"><button class="btn" type="button" id="mCopy">نسخ كودي</button><button class="btn primary" type="button" id="mMerge">دمج الكود اللي لصقته</button></div><button class="btn" type="button" data-close>إغلاق</button></div></dialog>
   <dialog id="dlgSave"><div class="dlg"><h3>حفظ وتحميل الشبكة</h3>
     <p class="msg">انسخ النص واحفظه في ملاحظاتك. للتحميل الصق النص هنا واضغط تحميل. الشبكة تتحفظ تلقائياً في هذا المتصفح أيضاً.</p>
     <textarea id="saveTxt" aria-label="بيانات الشبكة JSON"></textarea>
     <div class="row"><button class="btn primary" type="button" id="bCopy">نسخ</button><button class="btn" type="button" id="bLoad">تحميل</button><button class="btn" type="button" data-close>إغلاق</button></div></div></dialog>
 </div>
 <script>
-/* ===== Engine: devices, links, L2 flooding, L3 routing, ping/trace ===== */
+/* ===== Engine: catalog, links, L2 flooding, L3 routing, wireless, DHCP/DNS/HTTP, firewall, VPN, NAT ===== */
 const NS = {};
-NS.state = { devices: [], seq: {} };
 NS.fresh = () => { NS.state = { devices: [], seq: {} }; };
+NS.fresh();
+NS.RANGE = 240;
 
 NS.ip2n = s => { const p = String(s).split('.').map(Number); return p.length === 4 && p.every(x => x >= 0 && x <= 255 && Number.isInteger(x)) ? ((p[0] << 24) >>> 0) + (p[1] << 16) + (p[2] << 8) + p[3] : null; };
 NS.n2ip = n => [n >>> 24, (n >>> 16) & 255, (n >>> 8) & 255, n & 255].join('.');
@@ -325,167 +382,414 @@ NS.maskLen = m => { const n = NS.ip2n(m); if (n === null) return null; let c = 0
 NS.net = (ip, m) => (NS.ip2n(ip) & NS.ip2n(m)) >>> 0;
 NS.sameNet = (a, b, m) => NS.net(a, m) === NS.net(b, m);
 NS.mac = (() => { let k = 0; return () => { k++; return '00e0.' + (0xa000 + k * 37).toString(16).padStart(4, '0') + '.' + (0x1000 + k * 91).toString(16).padStart(4, '0'); }; })();
-
 NS.dev = id => NS.state.devices.find(d => d.id === id);
 NS.nextId = () => 'd' + Math.random().toString(36).slice(2, 8);
 
-NS.MODELS = { Router: { type: 'router', label: 'Router' }, Switch: { type: 'switch', label: 'Switch' }, PC: { type: 'pc', label: 'PC' }, Laptop: { type: 'pc', label: 'Laptop' }, Server: { type: 'pc', label: 'Server' } };
-NS.addDevice = (type, x, y, model) => {
-  model = model || { pc: 'PC', switch: 'Switch', router: 'Router' }[type];
-  const n = NS.state.seq[model] || 0; NS.state.seq[model] = n + 1;
-  const d = { id: NS.nextId(), type, model, x, y, ifaces: [], routes: [], arp: {}, mac: {}, mode: 'user', ctx: null, off: false, name: model + n, host: model === 'Switch' ? 'Switch' : model === 'Router' ? 'Router' : model + n };
-  if (type === 'pc') { d.gw = ''; d.ifaces.push(NS.mkIf('FastEthernet0', false)); }
-  if (type === 'switch') for (let i = 1; i <= 8; i++) d.ifaces.push(NS.mkIf('FastEthernet0/' + i, false));
-  if (type === 'router') for (let i = 0; i < 3; i++) d.ifaces.push(NS.mkIf('GigabitEthernet0/' + i, true));
-  d.ifaces.forEach(i => { i.dev = d.id; });
+/* ---------- catalog ---------- */
+const R = (pfx, a, b, kind) => { const o = []; for (let i = a; i <= b; i++) o.push({ n: pfx + i, kind: kind || 'eth' }); return o; };
+const CON = { n: 'Console', kind: 'console' };
+const rtr = (label, desc, ports, slots) => ({ base: 'Router', type: 'router', sub: 'routers', label, desc, ports: ports.concat([CON]), slots });
+const sw = (label, desc, ports, l3, slots) => ({ base: 'Switch', type: 'switch', sub: 'switches', label, desc, l3: !!l3, ports: ports.concat([CON]), slots: slots || [] });
+const hostM = (base, label, desc, ports, sub, extra) => Object.assign({ base, type: 'pc', sub, label, desc, ports }, extra || {});
+NS.MODELS = {
+  '1941': rtr('1941', 'Router 1941: بورتين GigabitEthernet وفتحتين HWIC.', R('GigabitEthernet0/', 0, 1), ['hwic', 'hwic']),
+  '2901': rtr('2901', 'Router 2901: بورتين GigabitEthernet و4 فتحات HWIC.', R('GigabitEthernet0/', 0, 1), ['hwic', 'hwic', 'hwic', 'hwic']),
+  '2911': rtr('2911', 'Router 2911: 3 بورتات GigabitEthernet وفتحتين HWIC.', R('GigabitEthernet0/', 0, 2), ['hwic', 'hwic']),
+  '4321': rtr('4321', 'ISR 4321: بورتين GigabitEthernet وفتحتين NIM.', R('GigabitEthernet0/0/', 0, 1), ['nim', 'nim']),
+  'ISR4331': rtr('ISR4331', 'ISR 4331: 3 بورتات GigabitEthernet و3 فتحات NIM.', R('GigabitEthernet0/0/', 0, 2), ['nim', 'nim', 'nim']),
+  '2960': sw('2960', 'Switch 2960 (Layer 2): 24 FastEthernet + 2 Gigabit، VLANs.', R('FastEthernet0/', 1, 24).concat(R('GigabitEthernet0/', 1, 2)), false),
+  '3560': sw('3560', 'Switch 3560 (Layer 3): VLANs وSVI وip routing، وفتحتين SFP.', R('FastEthernet0/', 1, 24).concat(R('GigabitEthernet0/', 1, 2)), true, ['sfp', 'sfp']),
+  '3650': sw('3650', 'Switch 3650 (Layer 3): 24 Gigabit + 4 Uplink، VLANs وSVI وip routing.', R('GigabitEthernet1/0/', 1, 24).concat(R('GigabitEthernet1/1/', 1, 4)), true),
+  'Hub': { base: 'Hub', type: 'hub', sub: 'hubs', label: 'Hub', desc: 'Hub: بيبث أي إشارة لكل البورتات (Collision Domain واحد).', ports: R('FastEthernet', 0, 7) },
+  'Coaxial Splitter': { base: 'Splitter', type: 'hub', sub: 'hubs', label: 'Coax Splitter', desc: 'Coaxial Splitter: بيوزع إشارة الكابل على 4 بورتات Coaxial.', ports: R('Coaxial', 0, 3, 'coax') },
+  'Access Point': { base: 'AccessPoint', type: 'ap', sub: 'wireless', label: 'Access Point', desc: 'Access Point: بيحوّل الشبكة السلكية لـ WiFi (SSID وباسورد، مدى محدود).', ports: [{ n: 'GigabitEthernet0', kind: 'eth' }, { n: 'Radio0', kind: 'radio' }] },
+  'WLC': hostM('WLC', 'WLC', 'Wireless LAN Controller: بيدير الـ APs ويبعتلها الـ SSID.', [{ n: 'GigabitEthernet0', kind: 'eth' }], 'wireless'),
+  'Home Router': { base: 'HomeRouter', type: 'switch', l3: true, home: true, sub: 'wireless', label: 'Home Router', desc: 'Home Router: 4 LAN + WiFi + Internet، وفيه DHCP وNAT جاهزين.', ports: R('Ethernet', 1, 4).concat([{ n: 'Radio0', kind: 'radio' }, { n: 'Internet', kind: 'eth' }]), slots: [] },
+  'Repeater': { base: 'Repeater', type: 'ap', repeater: true, sub: 'wireless', label: 'Repeater', desc: 'Wireless Repeater: بيمد مدى الـ WiFi (لازم يتصل بـ AP بنفس الـ SSID).', ports: [{ n: 'Radio0', kind: 'radio' }, { n: 'Uplink0', kind: 'wifi' }] },
+  'ASA 5506': { base: 'ASA', type: 'firewall', fw: 'asa', sub: 'security', label: 'ASA 5506', desc: 'ASA 5506 Firewall: security-levels وNAT وVPN، وCLI بأسلوب ASA.', host: 'ciscoasa', ports: R('GigabitEthernet1/', 1, 3).concat([CON]) },
+  'Meraki MX': { base: 'MX', type: 'firewall', fw: 'meraki', sub: 'security', label: 'Meraki MX', desc: 'Meraki MX: جدار حماية بإدارة من الواجهة (Internet + 3 LAN) مع NAT وVPN.', ports: [{ n: 'Internet', kind: 'eth' }].concat(R('LAN', 1, 3)) },
+  'Cloud': { base: 'Cloud', type: 'cloud', sub: 'wan', label: 'Cloud', desc: 'Cloud: بيربط Ethernet وSerial وCoaxial وPhone في شبكة مزود خدمة واحدة.', ports: R('Ethernet', 0, 3).concat(R('Serial', 0, 3, 'serial'), R('Coaxial', 0, 1, 'coax'), R('Phone', 0, 1, 'phone')) },
+  'DSL Modem': { base: 'DSL-Modem', type: 'modem', sub: 'wan', label: 'DSL Modem', desc: 'DSL Modem: بيربط خط التليفون (Phone) بكابل Ethernet.', ports: [{ n: 'Phone0', kind: 'phone' }, { n: 'Ethernet0', kind: 'eth' }] },
+  'Cable Modem': { base: 'Cable-Modem', type: 'modem', sub: 'wan', label: 'Cable Modem', desc: 'Cable Modem: بيربط كابل Coaxial بكابل Ethernet.', ports: [{ n: 'Coaxial0', kind: 'coax' }, { n: 'Ethernet0', kind: 'eth' }] },
+  'PC': hostM('PC', 'PC', 'PC: كارت FastEthernet (قابل للتبديل) ومنفذ Console RS232.', [{ n: 'FastEthernet0', kind: 'eth', mod: 0 }, { n: 'RS232', kind: 'console' }], 'users', { slots: ['nic'] }),
+  'Laptop': hostM('Laptop', 'Laptop', 'Laptop: نفس إمكانيات الـ PC، وتقدر تبدّل الكارت لـ WiFi.', [{ n: 'FastEthernet0', kind: 'eth', mod: 0 }, { n: 'RS232', kind: 'console' }], 'users', { slots: ['nic'] }),
+  'Tablet': hostM('Tablet', 'Tablet', 'Tablet: WiFi فقط.', [{ n: 'Wireless0', kind: 'wifi' }], 'users'),
+  'Smartphone': hostM('Smartphone', 'Smartphone', 'Smartphone: WiFi فقط.', [{ n: 'Wireless0', kind: 'wifi' }], 'users'),
+  'Server': hostM('Server', 'Server', 'Server: HTTP/HTTPS وDNS وDHCP وFTP وTFTP وEmail وSyslog وAAA.', [{ n: 'FastEthernet0', kind: 'eth', mod: 0 }], 'servers', { slots: ['nic'], server: true }),
+  'IP Phone': hostM('IPPhone', 'IP Phone', 'IP Phone: جهاز تليفون على الشبكة بـ IP.', [{ n: 'FastEthernet0', kind: 'eth' }], 'voice'),
+  'Printer': hostM('Printer', 'Printer', 'Printer: طابعة شبكية بـ IP.', [{ n: 'FastEthernet0', kind: 'eth' }], 'voice'),
+  'IoT Sensor': hostM('Sensor', 'Sensor', 'IoT Sensor: حساس حرارة بيرد على الشبكة (سلكي أو WiFi).', [{ n: 'Wireless0', kind: 'wifi' }, { n: 'FastEthernet0', kind: 'eth' }], 'iot', { iot: 'sensor' }),
+  'IoT Camera': hostM('Camera', 'Camera', 'IoT Camera: كاميرا مراقبة (سلكي أو WiFi).', [{ n: 'Wireless0', kind: 'wifi' }, { n: 'FastEthernet0', kind: 'eth' }], 'iot', { iot: 'camera' }),
+  'IoT Controller': hostM('Controller', 'Controller', 'IoT Controller: متحكم (إضاءة/قفل) بيرد على الشبكة.', [{ n: 'Wireless0', kind: 'wifi' }, { n: 'FastEthernet0', kind: 'eth' }], 'iot', { iot: 'controller' })
+};
+NS.MODULES = {
+  'HWIC-2T': { label: 'HWIC-2T · 2 × Serial', slot: 'hwic', make: k => R('Serial0/' + k + '/', 0, 1, 'serial') },
+  'HWIC-1GE-SFP': { label: 'HWIC-1GE-SFP · Gigabit Fiber', slot: 'hwic', make: k => [{ n: 'GigabitEthernet0/' + (3 + k), kind: 'fiber' }] },
+  'NIM-2T': { label: 'NIM-2T · 2 × Serial', slot: 'nim', make: k => R('Serial0/' + (k + 1) + '/', 0, 1, 'serial') },
+  'NIM-1GE-SFP': { label: 'NIM-1GE-SFP · Gigabit Fiber', slot: 'nim', make: k => [{ n: 'GigabitEthernet0/' + (k + 1) + '/0', kind: 'fiber' }] },
+  'GLC-SX-MM': { label: 'SFP GLC-SX-MM · Gigabit Fiber', slot: 'sfp', make: k => [{ n: 'GigabitEthernet0/' + (3 + k), kind: 'fiber' }] },
+  'PT-HOST-NM-1CFE': { label: 'NIC Fast Ethernet (Copper)', slot: 'nic', make: () => [{ n: 'FastEthernet0', kind: 'eth' }] },
+  'PT-HOST-NM-1CGE': { label: 'NIC Gigabit Ethernet (Copper)', slot: 'nic', make: () => [{ n: 'GigabitEthernet0', kind: 'eth' }] },
+  'PT-HOST-NM-1FFE': { label: 'NIC Fast Ethernet (Fiber)', slot: 'nic', make: () => [{ n: 'FastEthernet0', kind: 'fiber' }] },
+  'PT-HOST-NM-1W': { label: 'NIC Wireless (WiFi)', slot: 'nic', make: () => [{ n: 'Wireless0', kind: 'wifi' }] },
+  'PT-HOST-NM-1AM': { label: 'NIC Modem (Phone line)', slot: 'nic', make: () => [{ n: 'Modem0', kind: 'phone' }] }
+};
+NS.SLOT_AR = { hwic: 'HWIC', nim: 'NIM', sfp: 'SFP', nic: 'NIC' };
+
+/* ---------- roles ---------- */
+NS.cls = d => ['switch', 'hub', 'ap', 'cloud', 'modem'].includes(d.type) ? 'mdix' : 'mdi';
+NS.pcls = i => { if (i.mdi) return 'mdi'; const d = NS.dev(i.dev); return d ? NS.cls(d) : 'mdi'; };
+NS.forwards = d => d.type === 'router' || d.type === 'firewall' || (d.type === 'switch' && !!d.l3 && !!d.routing);
+NS.isHost = d => d.type === 'pc' || d.type === 'ap';
+NS.isBridge = d => ['switch', 'hub', 'ap', 'cloud', 'modem'].includes(d.type);
+NS.canOriginate = d => !['hub', 'cloud', 'modem'].includes(d.type);
+NS.dataIfaces = d => d.ifaces.filter(i => i.kind !== 'console');
+NS.mainIf = d => d.ifaces.find(i => i.kind !== 'console' && i.kind !== 'radio') || null;
+NS.allIfs = d => d.ifaces.concat(d.svis || []);
+NS.ipIfs = d => NS.allIfs(d).filter(i => i.kind !== 'console' && i.kind !== 'radio');
+NS.iface = (d, name) => NS.allIfs(d).find(i => i.name === name);
+NS.short = n => n.replace('GigabitEthernet', 'Gi').replace('FastEthernet', 'Fa').replace('Ethernet', 'Eth').replace('Coaxial', 'Cx').replace('Wireless', 'Wl');
+
+NS.mkIf = (name, kind, shut) => { const i = { name, kind: kind || 'eth', ip: '', mask: '', shut: !!shut, vlan: 1, link: null, mac: NS.mac() }; if (i.kind === 'radio') i.clients = []; if (i.kind === 'wifi') i.wifi = { ssid: 'Default', psk: '' }; return i; };
+NS.mkSvi = (d, v) => { let s = (d.svis || []).find(x => x.vlan === v); if (!s) { s = { name: 'Vlan' + v, kind: 'svi', vlan: v, ip: '', mask: '', shut: false, link: null, mac: NS.mac(), dev: d.id }; (d.svis = d.svis || []).push(s); } return s; };
+NS.defSvc = () => ({ http: { on: true, page: '<html><body><h1>Welcome to Netlab Server</h1><p>HTTP service is running.</p></body></html>' }, https: { on: true }, dns: { on: false, records: [] }, dhcp: { on: false, pool: { name: 'serverPool', gw: '', dns: '', start: '', mask: '255.255.255.0', max: 50 } }, ftp: { on: false, users: [{ u: 'cisco', p: 'cisco' }] }, tftp: { on: false }, email: { on: false, domain: '', users: [] }, syslog: { on: false }, aaa: { on: false, clients: [] } });
+
+NS.addDevice = (model, x, y) => {
+  const alias = { router: '2911', switch: '2960', pc: 'PC', Router: '2911', Switch: '2960' };
+  if (!NS.MODELS[model]) model = alias[model] || 'PC';
+  const M = NS.MODELS[model], n = NS.state.seq[M.base] || 0; NS.state.seq[M.base] = n + 1;
+  const d = { id: NS.nextId(), type: M.type, model, x, y, name: M.base + n, host: M.host || (M.type === 'router' ? 'Router' : M.type === 'switch' ? 'Switch' : M.base + n), ifaces: [], svis: [], routes: [], arp: {}, mac: {}, mode: 'user', ctx: null, off: false, slots: (M.slots || []).map(() => '') };
+  const shut = M.type === 'router' || (M.type === 'firewall' && M.fw === 'asa');
+  M.ports.forEach(p => { const i = NS.mkIf(p.n, p.kind, shut && p.kind !== 'console'); if (p.mod !== undefined) { i.mod = p.mod; d.slots[p.mod] = 'PT-HOST-NM-1CFE'; } i.dev = d.id; d.ifaces.push(i); });
+  if (M.l3) d.l3 = true;
+  if (M.type === 'pc') { d.gw = ''; d.dns = ''; if (M.server) d.svc = NS.defSvc(); if (M.iot) { d.iot = M.iot; d.iotState = { temp: 24, on: true }; } if (model === 'WLC') d.wlan = { ssid: 'CorpWLAN', psk: '' }; }
+  if (M.type === 'ap') { d.gw = ''; d.wifi = { ssid: 'Default', psk: '' }; d.wlcIp = ''; if (M.repeater) d.repeater = true; }
+  if (M.type === 'router') { d.dhcpPools = []; d.dhcpExcl = []; d.leases = {}; d.nat = ''; }
+  if (M.type === 'switch') { d.routing = false; d.dhcpPools = []; d.dhcpExcl = []; d.leases = {}; }
+  if (M.type === 'firewall') {
+    d.nat = ''; d.allowIcmp = false; d.vpn = { on: false, peer: '', key: '', lnet: '', lmask: '255.255.255.0', rnet: '', rmask: '255.255.255.0' };
+    const lv = M.fw === 'asa' ? [['outside', 0], ['inside', 100], ['dmz', 50]] : [['outside', 0], ['inside', 100], ['inside', 100], ['inside', 100]];
+    NS.dataIfaces(d).forEach((i, k) => { if (lv[k]) { i.nameif = lv[k][0]; i.level = lv[k][1]; } });
+    if (M.fw === 'meraki') { d.nat = 'Internet'; d.allowIcmp = false; }
+  }
+  if (M.home) {
+    d.routing = true; d.nat = 'Internet'; d.wifi = { ssid: 'HomeNet', psk: '' }; d.dhcpPools = [{ name: 'LAN', net: '192.168.0.0', mask: '255.255.255.0', gw: '192.168.0.1', dns: '' }]; d.dhcpExcl = [{ from: '192.168.0.1', to: '192.168.0.99' }]; d.leases = {};
+    const s = NS.mkSvi(d, 1); s.ip = '192.168.0.1'; s.mask = '255.255.255.0';
+    const w = NS.iface(d, 'Internet'); w.routed = true; w.mdi = true;
+  }
   NS.state.devices.push(d); return d;
 };
-NS.short = n => n.replace('GigabitEthernet', 'Gi').replace('FastEthernet', 'Fa');
-NS.mkIf = (name, shut) => ({ name, ip: '', mask: '', shut, vlan: 1, link: null, mac: NS.mac() });
-NS.iface = (d, name) => d.ifaces.find(i => i.name === name);
-NS.peer = i => i.link ? { dev: NS.dev(i.link.dev), iface: null, name: i.link.iface } : null;
-NS.peerIf = i => { if (!i.link) return null; const d = NS.dev(i.link.dev); return d ? { dev: d, iface: NS.iface(d, i.link.iface) } : null; };
-NS.cls = d => d.type === 'switch' ? 'mdix' : 'mdi';
-NS.cableOk = i => {
-  const c = (i.link && i.link.cable) || 'auto'; if (c === 'auto' || c === 'fiber') return true;
-  const p = NS.peerIf(i); if (!p) return false; const me = NS.dev(p.iface.link.dev); if (!me) return false;
-  const same = NS.cls(me) === NS.cls(p.dev); return c === 'cross' ? same : !same;
-};
-NS.linkUp = i => { const p = NS.peerIf(i); if (!p || i.shut || p.iface.shut || p.dev.off) return false; const me = NS.dev(i.dev); if (me && me.off) return false; return NS.cableOk(i); };
-NS.freePorts = d => d.ifaces.filter(i => !i.link);
 
-NS.connect = (a, b, cable, pa, pb) => {
-  if (a === b) return 'لا يمكن توصيل الجهاز بنفسه';
-  const ia = pa ? NS.iface(a, pa) : a.ifaces.find(i => !i.link), ib = pb ? NS.iface(b, pb) : b.ifaces.find(i => !i.link);
-  if (!ia || ia.link) return a.name + ': لا يوجد بورت فاضي';
-  if (!ib || ib.link) return b.name + ': لا يوجد بورت فاضي';
-  let c = cable || 'auto'; if (c === 'auto') c = ((a.type === 'switch') === (b.type === 'switch')) ? 'cross' : 'straight';
-  ia.link = { dev: b.id, iface: ib.name, cable: c }; ib.link = { dev: a.id, iface: ia.name, cable: c };
+NS.setModule = (d, k, name) => {
+  if (!d.off) return 'اطفئ الجهاز أولاً (Power OFF) قبل تركيب أو إزالة الموديول';
+  const kind = NS.MODELS[d.model].slots[k]; if (name && NS.MODULES[name].slot !== kind) return 'الموديول ده غير متوافق مع الفتحة';
+  let idx = d.ifaces.findIndex(i => i.mod === k);
+  d.ifaces.filter(i => i.mod === k).forEach(i => NS.disconnect(i));
+  d.ifaces = d.ifaces.filter(i => i.mod !== k);
+  if (idx < 0) { idx = d.ifaces.findIndex(i => i.kind === 'console'); if (idx < 0) idx = d.ifaces.length; }
+  d.slots[k] = name || '';
+  if (name) { const mk = NS.MODULES[name].make(k, d).map(p => { const i = NS.mkIf(p.n, p.kind, d.type === 'router'); i.mod = k; i.dev = d.id; return i; }); d.ifaces.splice(idx, 0, ...mk); }
   return null;
 };
-NS.disconnect = i => { const p = NS.peerIf(i); if (p) p.iface.link = null; i.link = null; };
-NS.removeDevice = d => { d.ifaces.forEach(i => NS.disconnect(i)); NS.state.devices = NS.state.devices.filter(x => x !== d); };
 
-/* L2: flood from an interface through switches (same VLAN) looking for an IP owner */
-NS.l2reach = (src, sIf, ip) => {
-  if (!NS.linkUp(sIf)) return null;
-  const first = NS.peerIf(sIf); const seen = new Set();
-  const stack = [{ d: first.dev, i: first.iface, path: [src.id] }];
-  while (stack.length) {
-    const { d, i, path } = stack.pop(); const key = d.id + ':' + i.name;
-    if (seen.has(key)) continue; seen.add(key);
-    if (d.type !== 'switch') { if (i.ip === ip && !i.shut) return { dev: d, iface: i, path: path.concat(d.id) }; continue; }
-    const v = i.vlan; d.mac[sIf.mac] = { port: i.name, vlan: v };
+/* ---------- links ---------- */
+NS.peerIf = i => { if (!i.link) return null; const d = NS.dev(i.link.dev); if (!d) return null; const j = NS.iface(d, i.link.iface); return j ? { dev: d, iface: j } : null; };
+NS.neigh = (d, i) => {
+  if (i.kind === 'console') return [];
+  if (i.kind === 'radio') return (i.clients || []).map(c => { const x = NS.dev(c.dev); return x ? { dev: x, iface: NS.iface(x, c.iface) } : null; }).filter(p => p && p.iface);
+  const p = NS.peerIf(i); return p ? [p] : [];
+};
+NS.cableOk = i => {
+  const l = i.link, p = NS.peerIf(i); if (!l || !p) return false;
+  const me = NS.dev(i.dev), pe = p.dev, c = l.cable, k1 = i.kind, k2 = p.iface.kind;
+  if (c === 'wireless' || c === 'console') return true;
+  if (c === 'straight' || c === 'cross') { if (k1 !== 'eth' || k2 !== 'eth') return false; const same = NS.pcls(i) === NS.pcls(p.iface); return c === 'cross' ? same : !same; }
+  if (c === 'fiber') return k1 === 'fiber' && k2 === 'fiber';
+  if (c === 'serial') { if (k1 !== 'serial' || k2 !== 'serial') return false; if (me.type === 'cloud' || pe.type === 'cloud') return true; const dce = l.end === 'dce' ? i : p.iface; return !!dce.clock; }
+  if (c === 'coax') return k1 === 'coax' && k2 === 'coax';
+  if (c === 'phone') return k1 === 'phone' && k2 === 'phone';
+  return false;
+};
+NS.linkUp = i => {
+  const me = NS.dev(i.dev); if (me && me.off) return false; if (i.shut) return false;
+  if (i.kind === 'svi') return !!me && me.ifaces.some(j => !j.routed && j.kind !== 'console' && j.vlan === i.vlan && NS.linkUp(j));
+  if (i.kind === 'radio') return (i.clients || []).length > 0;
+  const p = NS.peerIf(i); if (!p || p.iface.shut || p.dev.off) return false;
+  return NS.cableOk(i);
+};
+NS.whyDown = i => {
+  const me = NS.dev(i.dev), p = NS.peerIf(i);
+  if (me && me.off) return me.name + ' مطفأ (Power OFF)';
+  if (i.shut) return 'البورت ' + i.name + ' مقفول (shutdown)';
+  if (i.kind === 'svi') return 'الـ ' + i.name + ' واقف: مفيش بورت شغال في الـ VLAN ده';
+  if (i.kind === 'radio') return 'مفيش أجهزة متصلة لاسلكياً بالـ ' + me.name;
+  if (!p) return i.kind === 'wifi' ? 'مفيش Access Point بنفس الـ SSID والباسورد في المدى' : 'البورت ' + i.name + ' غير متوصل بكابل';
+  if (p.dev.off) return p.dev.name + ' مطفأ (Power OFF)';
+  if (p.iface.shut) return 'البورت المقابل ' + p.dev.name + ' ' + p.iface.name + ' مقفول (shutdown)';
+  if (i.link.cable === 'serial' && me.type !== 'cloud' && p.dev.type !== 'cloud') return 'لا يوجد clock rate على طرف الـ DCE (جرّب: clock rate 64000)';
+  return 'نوع الكابل غير مناسب لهذا الاتصال (Cable mismatch)';
+};
+NS.freeOf = (d, k) => d.ifaces.find(i => !i.link && i.kind === k);
+NS.KIND_AR = { eth: 'Ethernet', fiber: 'Fiber', serial: 'Serial', coax: 'Coaxial', phone: 'Phone', console: 'Console', wifi: 'WiFi', radio: 'Radio' };
+NS.CABLE_KINDS = { straight: ['eth'], cross: ['eth'], fiber: ['fiber'], 'serial-dce': ['serial'], 'serial-dte': ['serial'], coax: ['coax'], phone: ['phone'], console: ['console'] };
+NS.connect = (a, b, cable, pa, pb) => {
+  if (a === b) return 'لا يمكن توصيل الجهاز بنفسه';
+  cable = cable || 'auto';
+  let ia = pa ? NS.iface(a, pa) : null, ib = pb ? NS.iface(b, pb) : null;
+  if (cable === 'auto') {
+    for (const k of ['eth', 'serial', 'coax', 'phone', 'fiber']) {
+      const x = ia || NS.freeOf(a, k), y = ib || NS.freeOf(b, k);
+      if (x && y && x.kind === k && y.kind === k && !x.link && !y.link) { ia = x; ib = y; cable = k === 'eth' ? (NS.pcls(x) === NS.pcls(y) ? 'cross' : 'straight') : k === 'serial' ? 'serial-dce' : k; break; }
+    }
+    if (cable === 'auto') return 'مفيش بورتات فاضية متوافقة بين ' + a.name + ' و ' + b.name;
+  } else {
+    const ks = NS.CABLE_KINDS[cable]; ia = ia || NS.freeOf(a, ks[0]); ib = ib || NS.freeOf(b, ks[0]);
+    if (!ia) return a.name + ': لا يوجد بورت ' + NS.KIND_AR[ks[0]] + ' فاضي لهذا الكابل';
+    if (!ib) return b.name + ': لا يوجد بورت ' + NS.KIND_AR[ks[0]] + ' فاضي لهذا الكابل';
+    if (ia.link) return a.name + ' ' + ia.name + ' مستخدم'; if (ib.link) return b.name + ' ' + ib.name + ' مستخدم';
+    if (!ks.includes(ia.kind) || !ks.includes(ib.kind)) return 'الكابل ده لا يناسب نوع البورت (' + NS.KIND_AR[ia.kind] + ' / ' + NS.KIND_AR[ib.kind] + ')';
+  }
+  let c = cable, ea, eb; if (c === 'serial-dce') { c = 'serial'; ea = 'dce'; eb = 'dte'; } else if (c === 'serial-dte') { c = 'serial'; ea = 'dte'; eb = 'dce'; }
+  ia.link = { dev: b.id, iface: ib.name, cable: c, end: ea }; ib.link = { dev: a.id, iface: ia.name, cable: c, end: eb };
+  return null;
+};
+NS.disconnect = i => { const p = NS.peerIf(i); if (p && p.iface.link) p.iface.link = null; i.link = null; };
+NS.removeDevice = d => { d.ifaces.forEach(i => NS.disconnect(i)); NS.state.devices = NS.state.devices.filter(x => x !== d); };
+NS.consoleTarget = d => { const i = d.ifaces.find(x => x.kind === 'console' && x.link); const p = i && NS.peerIf(i); return p && !p.dev.off && !d.off ? p.dev : null; };
+
+/* ---------- wireless ---------- */
+NS.radioCfg = d => { if (d.repeater) { const u = d.ifaces.find(i => i.kind === 'wifi'); return (u && u.wifi) || {}; } if (d.joinedWlan) return d.joinedWlan; return d.wifi || {}; };
+NS.dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+NS.refresh = () => {
+  const ds = NS.state.devices;
+  ds.forEach(d => d.ifaces.forEach(i => { if (i.kind === 'radio') i.clients = []; if (i.kind === 'wifi' && i.link && i.link.cable === 'wireless') i.link = null; }));
+  ds.forEach(a => { a.joinedWlan = null; if (a.type !== 'ap' || a.repeater || !a.wlcIp || a.off) return; const w = ds.find(x => x.model === 'WLC' && !x.off && NS.mainIf(x) && NS.mainIf(x).ip === a.wlcIp); if (w && w.wlan && w.wlan.ssid && NS.ping(a, a.wlcIp).ok) a.joinedWlan = w.wlan; });
+  const radios = [];
+  ds.forEach(d => { if (d.off) return; d.ifaces.forEach(i => { if (i.kind === 'radio' && !i.shut) { const cfg = NS.radioCfg(d); if (cfg.ssid) radios.push({ d, i, cfg }); } }); });
+  for (let pass = 0; pass < 2; pass++) ds.forEach(d => {
+    if (d.off || (pass === 0) === !!d.repeater) return;
+    d.ifaces.forEach(i => {
+      if (i.kind !== 'wifi' || i.shut || i.link || !i.wifi || !i.wifi.ssid) return;
+      let best = null, bd = 1e9;
+      radios.forEach(r => { if (r.d === d) return; const dd = NS.dist(d, r.d); if (r.cfg.ssid === i.wifi.ssid && (r.cfg.psk || '') === (i.wifi.psk || '') && dd <= NS.RANGE && dd < bd) { best = r; bd = dd; } });
+      if (best) { i.link = { dev: best.d.id, iface: best.i.name, cable: 'wireless' }; best.i.clients.push({ dev: d.id, iface: i.name }); }
+    });
+  });
+};
+
+/* ---------- L2 flooding ---------- */
+NS.hit = (d, i, path, hubN) => {
+  const full = path.concat(d.id), floods = [];
+  Object.keys(hubN).forEach(h => { const k = full.indexOf(h); if (k < 0) return; const keep = new Set([full[k - 1], full[k + 1]]); hubN[h].forEach(n => { if (!keep.has(n)) floods.push({ from: h, to: n }); }); });
+  return { dev: d, iface: i, path: full, floods };
+};
+NS.l2reach = (src, sIf, match) => {
+  const srcMac = sIf.mac, seen = new Set(), queue = [], hubN = {};
+  const pushN = (from, j, path, v) => NS.neigh(from, j).forEach(n => queue.push({ d: n.dev, i: n.iface, path, v }));
+  if (sIf.kind === 'svi') src.ifaces.forEach(j => { if (j.routed || j.kind === 'console' || j.vlan !== sIf.vlan || !NS.linkUp(j)) return; pushN(src, j, [src.id], sIf.vlan); });
+  else { if (!NS.linkUp(sIf)) return null; pushN(src, sIf, [src.id], null); }
+  while (queue.length) {
+    const { d, i, path, v } = queue.shift(), key = d.id + ':' + i.name;
+    if (seen.has(key)) continue; seen.add(key); if (d.off) continue;
+    const bridge = NS.isBridge(d) && !(d.type === 'switch' && i.routed);
+    if (!bridge) { if (match(d, i)) return NS.hit(d, i, path, hubN); continue; }
+    const v2 = d.type === 'switch' ? i.vlan : v, p2 = path.concat(d.id);
+    for (const sv of d.svis || []) if (sv.vlan === v2 && match(d, sv)) return NS.hit(d, sv, path, hubN);
+    if (d.type === 'ap' && d.ifaces[0].kind === 'eth' && match(d, d.ifaces[0])) return NS.hit(d, d.ifaces[0], path, hubN);
+    if (d.type === 'switch') d.mac[srcMac] = { port: i.name, vlan: v2 };
     for (const j of d.ifaces) {
-      if (j === i || j.vlan !== v || !NS.linkUp(j)) continue;
-      const p = NS.peerIf(j); stack.push({ d: p.dev, i: p.iface, path: path.concat(d.id) });
+      if ((j === i && j.kind !== 'radio') || j.kind === 'console' || j.routed) continue;
+      if (d.type === 'switch' && j.vlan !== v2) continue;
+      if (!NS.linkUp(j)) continue;
+      const ns = NS.neigh(d, j);
+      if (d.type === 'hub') (hubN[d.id] = hubN[d.id] || []).push(...ns.map(n => n.dev.id));
+      ns.forEach(n => queue.push({ d: n.dev, i: n.iface, path: p2, v: v2 }));
     }
   }
   return null;
 };
 
-/* L3: choose next hop for destination ip from device d */
+/* ---------- L3 ---------- */
 NS.route = (d, dst) => {
-  let best = null;
-  for (const i of d.ifaces) {
-    if (!i.ip || i.shut) continue;
+  let best = null; const ifs = NS.ipIfs(d);
+  for (const i of ifs) {
+    if (!i.ip || !i.mask || i.shut || (i.kind === 'svi' && !NS.linkUp(i))) continue;
     if (NS.sameNet(i.ip, dst, i.mask)) { const l = NS.maskLen(i.mask); if (!best || l > best.len) best = { len: l, iface: i, nh: dst, kind: 'C' }; }
   }
   if (best) return best;
-  if (d.type === 'pc') {
-    if (!d.gw) return { err: 'no-gw' };
-    const i = d.ifaces[0];
-    if (!i.ip) return { err: 'no-ip' };
-    if (!NS.sameNet(i.ip, d.gw, i.mask)) return { err: 'gw-off' };
-    return { iface: i, nh: d.gw, kind: 'G' };
+  if (NS.isHost(d)) {
+    if (!d.gw) return { err: ifs.some(i => i.ip) ? 'no-gw' : 'no-ip' };
+    const i = ifs.find(x => x.ip && x.mask && !x.shut && NS.sameNet(x.ip, d.gw, x.mask));
+    return i ? { iface: i, nh: d.gw, kind: 'G' } : { err: ifs.some(x => x.ip) ? 'gw-off' : 'no-ip' };
   }
-  for (const r of d.routes) {
-    const l = NS.maskLen(r.mask);
-    if (NS.net(dst, r.mask) !== NS.net(r.net, r.mask)) continue;
-    const out = d.ifaces.find(i => i.ip && !i.shut && NS.sameNet(i.ip, r.via, i.mask));
+  for (const r of d.routes || []) {
+    const l = NS.maskLen(r.mask); if (NS.net(dst, r.mask) !== NS.net(r.net, r.mask)) continue;
+    const out = ifs.find(i => i.ip && i.mask && !i.shut && NS.sameNet(i.ip, r.via, i.mask));
     if (out && (!best || l > best.len)) best = { len: l, iface: out, nh: r.via, kind: 'S' };
   }
   return best || { err: 'no-route' };
 };
+NS.owner = ip => { for (const d of NS.state.devices) for (const i of NS.ipIfs(d)) if (i.ip === ip && !i.shut) return { d, i }; return null; };
+NS.srcIpFor = (d, dst) => ((NS.route(d, dst) || {}).iface || {}).ip || '';
+const ARP_OK = (ip) => (d, j) => j.ip === ip && !j.shut && !d.off && (j.kind !== 'svi' || NS.linkUp(j));
 
-NS.owner = ip => { for (const d of NS.state.devices) for (const i of d.ifaces) if (i.ip === ip && !i.shut) return { d, i }; return null; };
-
-/* Walk one packet from device `src` to dst ip. Returns {ok, steps, reason, at} */
-NS.srcIpFor = (d, dst) => d.type === 'pc' ? d.ifaces[0].ip : ((NS.route(d, dst) || {}).iface || {}).ip || '';
-NS.send = (src, dst, label, srcIp) => {
-  const steps = []; steps.hops = []; let cur = src, ttl = 16, T = 128; const lbl = label || 'ICMP'; srcIp = srcIp || NS.srcIpFor(src, dst);
-  for (let hop = 0; hop < 20; hop++) {
-    if (cur.off) return { ok: false, steps, at: cur, reason: 'off', msg: cur.name + ' مطفأ (Power OFF)', T };
-    if (cur.ifaces.some(i => i.ip === dst && !i.shut)) return { ok: true, steps, at: cur, ttl, T };
-    if (cur.type === 'switch') return { ok: false, steps, at: cur, reason: 'drop', msg: cur.name + ' جهاز Layer 2 ولا يمرر الحزمة لـ IP' };
-    if (hop > 0 && cur.type === 'pc') return { ok: false, steps, at: cur, reason: 'drop', msg: cur.name + ' ليس راوتر ولا يمرر الحزم' };
-    if (ttl <= 0) return { ok: false, steps, at: cur, reason: 'ttl', msg: 'انتهى الـ TTL عند ' + cur.name + ' (احتمال Routing Loop)' };
+NS.send = (src, dst, label, srcIp, opt) => {
+  opt = opt || {}; const steps = []; steps.hops = [];
+  let cur = src, ttl = 16, T = 128, inIf = null, nat = null; const lbl = label || 'ICMP';
+  srcIp = srcIp || NS.srcIpFor(src, dst);
+  const fail = (at, reason, msg) => ({ ok: false, steps, at, reason, msg, T, nat });
+  for (let hop = 0; hop < 24; hop++) {
+    if (cur.off) return fail(cur, 'off', cur.name + ' مطفأ (Power OFF)');
+    if (NS.ipIfs(cur).some(i => i.ip === dst && !i.shut && (i.kind !== 'svi' || NS.linkUp(i)))) return { ok: true, steps, at: cur, ttl, T, nat };
+    if (hop === 0 && !NS.canOriginate(cur)) return fail(cur, 'drop', cur.name + ' جهاز طبقة 1/2 ولا يرسل حزم IP');
+    if (hop > 0 && !NS.forwards(cur)) return fail(cur, 'drop', cur.type === 'switch' ? cur.name + ' سويتش Layer 2 ولا يمرر حزم IP' : cur.name + ' جهاز طرفي ولا يمرر الحزم');
+    if (ttl <= 0) return fail(cur, 'ttl', 'انتهى الـ TTL عند ' + cur.name + ' (احتمال Routing Loop)');
+    const v = cur.vpn;
+    if (NS.forwards(cur) && v && v.on && v.rnet && NS.sameNet(dst, v.rnet, v.rmask || '255.255.255.0') && !NS.ipIfs(cur).some(i => i.ip && i.mask && NS.sameNet(i.ip, dst, i.mask))) {
+      const po = NS.owner(v.peer), mine = NS.srcIpFor(cur, v.peer);
+      if (!po || !po.d.vpn || !po.d.vpn.on) return fail(cur, 'vpn', 'VPN: الطرف الآخر (' + (v.peer || '؟') + ') غير مضبوط أو مطفأ');
+      if (po.d.vpn.key !== v.key || po.d.vpn.peer !== mine) return fail(cur, 'vpn', 'VPN: فشل IKE (المفتاح أو عنوان الطرف غير متطابق)');
+      if (po.d.vpn.lnet && !NS.sameNet(dst, po.d.vpn.lnet, po.d.vpn.lmask || '255.255.255.0')) return fail(cur, 'vpn', 'VPN: الوجهة خارج الشبكة المحلية للطرف الآخر (Interesting traffic mismatch)');
+      const t = NS.send(cur, v.peer, 'ESP', mine, { established: true });
+      if (!t.ok) return fail(t.at || cur, 'vpn', 'VPN tunnel down: ' + t.msg);
+      t.steps.forEach(s => steps.push(Object.assign({}, s, { vpn: true, srcIp, dstIp: dst, ttl: T })));
+      steps.hops.push({ dev: po.d, ip: po.i.ip }); cur = po.d; inIf = null; ttl--; if (hop > 0) T--; continue;
+    }
     const r = NS.route(cur, dst);
-    if (r.err) {
-      const m = { 'no-gw': 'لا يوجد Default Gateway على ' + cur.name, 'no-ip': 'لم يتم ضبط IP على ' + cur.name, 'gw-off': 'الـ Gateway خارج شبكة ' + cur.name, 'no-route': 'لا يوجد route إلى ' + dst + ' على ' + cur.name };
-      return { ok: false, steps, at: cur, reason: r.err, msg: m[r.err] };
+    if (r.err) { const m = { 'no-gw': 'لا يوجد Default Gateway على ' + cur.name, 'no-ip': 'لم يتم ضبط IP على ' + cur.name, 'gw-off': 'الـ Gateway خارج شبكة ' + cur.name, 'no-route': 'لا يوجد route إلى ' + dst + ' على ' + cur.name }; return fail(cur, r.err, m[r.err]); }
+    if (cur.type === 'firewall' && inIf && !opt.established) {
+      const a = inIf.level || 0, b = r.iface.level || 0, ok = cur.fw === 'asa' ? a > b : a >= b;
+      if (!ok && !cur.allowIcmp) return fail(cur, 'fw', cur.name + ' (Firewall) حجب الحزمة: من ' + (inIf.nameif || inIf.name) + ' [level ' + a + '] إلى ' + (r.iface.nameif || r.iface.name) + ' [level ' + b + ']. فعّل السماح بـ ICMP أو عدّل الـ security-level');
     }
-    const hit = NS.l2reach(cur, r.iface, r.nh);
-    if (!hit) {
-      const why = !r.iface.link ? 'البورت ' + r.iface.name + ' غير متوصل بكابل' : !NS.linkUp(r.iface) ? 'البورت ' + r.iface.name + ' مقفول (shutdown)' : 'فشل ARP لـ ' + r.nh + ': لا يوجد جهاز بهذا الـ IP على نفس الـ VLAN/الشبكة';
-      return { ok: false, steps, at: cur, reason: 'arp', msg: why };
-    }
-    cur.arp[r.nh] = hit.iface.mac;
-    if (cur.type === 'router') T--;
-    for (let k = 0; k < hit.path.length - 1; k++) steps.push({ from: hit.path[k], to: hit.path[k + 1], label: lbl, srcIp, dstIp: dst, ttl: T });
-    cur = hit.dev; ttl--; steps.hops.push({ dev: cur, ip: hit.iface.ip });
+    if (cur.nat && r.iface.name === cur.nat && inIf && inIf !== r.iface && r.iface.ip) { if (!nat) nat = { dev: cur, ip: r.iface.ip }; srcIp = r.iface.ip; }
+    const hit = NS.l2reach(cur, r.iface, ARP_OK(r.nh));
+    if (!hit) return fail(cur, 'arp', !NS.linkUp(r.iface) ? NS.whyDown(r.iface) : 'فشل ARP لـ ' + r.nh + ': لا يوجد جهاز بهذا الـ IP على نفس الـ VLAN/الشبكة');
+    if (hop > 0 && NS.forwards(cur)) T--;
+    const meta = { label: lbl, srcIp, dstIp: dst, ttl: T };
+    for (let k = 0; k < hit.path.length - 1; k++) steps.push(Object.assign({ from: hit.path[k], to: hit.path[k + 1] }, meta));
+    hit.floods.forEach(f => steps.push(Object.assign({ from: f.from, to: f.to, flood: true }, meta)));
+    cur.arp[r.nh] = hit.iface.mac; steps.hops.push({ dev: hit.dev, ip: hit.iface.ip });
+    inIf = hit.iface; cur = hit.dev; ttl--;
   }
-  return { ok: false, steps, at: cur, reason: 'ttl', msg: 'تجاوز الحد الأقصى للقفزات' };
+  return fail(cur, 'ttl', 'تجاوز الحد الأقصى للقفزات');
 };
 
-/* Full echo: request + reply */
 NS.ping = (src, dstIp) => {
-  const srcIp = NS.srcIpFor(src, dstIp);
+  const srcIp = NS.srcIpFor(src, dstIp), tag = (st, dir) => st.map(x => Object.assign({ dir }, x));
   const fwd = NS.send(src, dstIp, 'ICMP', srcIp);
-  const tag = (st, dir) => st.map(x => Object.assign({ dir }, x));
   if (!fwd.ok) return { ok: false, steps: tag(fwd.steps, 'req'), fail: fwd, dir: 'request', srcIp };
-  const back = NS.send(fwd.at, srcIp, 'ICMP', dstIp);
-  const steps = tag(fwd.steps, 'req').concat(tag(back.steps, 'rep'));
-  if (!back.ok) return { ok: false, steps, fail: back, dir: 'reply', srcIp };
-  return { ok: true, steps, ttl: back.T, hops: fwd.steps.length, srcIp, dstAt: fwd.at };
+  let steps = tag(fwd.steps, 'req'), at = fwd.at, last;
+  if (fwd.nat) {
+    const b1 = NS.send(at, fwd.nat.ip, 'ICMP', dstIp, { established: true }); steps = steps.concat(tag(b1.steps, 'rep'));
+    if (!b1.ok) return { ok: false, steps, fail: b1, dir: 'reply', srcIp };
+    last = NS.send(b1.at, srcIp, 'ICMP', fwd.nat.ip, { established: true });
+  } else last = NS.send(at, srcIp, 'ICMP', dstIp, { established: true });
+  steps = steps.concat(tag(last.steps, 'rep'));
+  if (!last.ok) return { ok: false, steps, fail: last, dir: 'reply', srcIp };
+  return { ok: true, steps, ttl: last.T, hops: fwd.steps.length, srcIp, dstAt: fwd.at, nat: !!fwd.nat };
 };
 
-NS.serialize = () => JSON.stringify({ v: 2, seq: NS.state.seq, devices: NS.state.devices.map(d => Object.assign({}, d, { mode: 'user', ctx: null })) });
-NS.load = txt => { const o = JSON.parse(txt); if (!o || !Array.isArray(o.devices)) throw new Error('ملف غير صالح'); NS.state = { devices: o.devices, seq: o.seq || {} }; NS.state.devices.forEach(d => { d.mode = 'user'; d.ctx = null; d.arp = d.arp || {}; d.mac = d.mac || {}; d.model = d.model || { pc: 'PC', switch: 'Switch', router: 'Router' }[d.type]; d.host = d.host || d.name; d.off = !!d.off; d.ifaces.forEach(i => { i.dev = d.id; }); }); };
+/* ---------- DHCP / DNS / HTTP ---------- */
+NS.inRange = (ip, ex) => (ex || []).some(r => { const n = NS.ip2n(ip), a = NS.ip2n(r.from), b = NS.ip2n(r.to || r.from); return n >= a && n <= b; });
+NS.dhcpServe = (srv, j, c, dry) => {
+  let pool = null, cand = [];
+  if (srv.type === 'pc' && srv.svc && srv.svc.dhcp.on && NS.mainIf(srv) === j) {
+    const p = srv.svc.dhcp.pool; if (!NS.ip2n(p.start) || NS.maskLen(p.mask) === null) return null;
+    pool = { mask: p.mask, gw: p.gw, dns: p.dns }; const s = NS.ip2n(p.start); for (let k = 0; k < (p.max || 50); k++) cand.push(NS.n2ip(s + k));
+  } else if ((srv.type === 'router' || srv.type === 'switch' || srv.type === 'firewall') && srv.dhcpPools && j.ip && j.mask) {
+    const p = srv.dhcpPools.find(x => x.net && x.mask && NS.sameNet(j.ip, x.net, x.mask)); if (!p) return null;
+    pool = p; const base = NS.net(p.net, p.mask), size = Math.pow(2, 32 - NS.maskLen(p.mask)); for (let k = 1; k < size - 1 && k < 300; k++) { const ip = NS.n2ip(base + k); if (!NS.inRange(ip, srv.dhcpExcl)) cand.push(ip); }
+  } else return null;
+  srv.leases = srv.leases || {}; const mine = srv.leases[c.mac];
+  const free = mine && cand.includes(mine) ? mine : cand.find(ip => !Object.values(srv.leases).includes(ip) && !NS.owner(ip) && (!j.ip || ip !== j.ip));
+  if (!free) return null;
+  if (!dry) srv.leases[c.mac] = free;
+  return { ip: free, mask: pool.mask, gw: pool.gw || '', dns: pool.dns || '', server: srv };
+};
+NS.dhcp = (c, i) => {
+  i = i || NS.mainIf(c); if (!i || !NS.linkUp(i)) return { ok: false, msg: 'الرابط واقف: ' + (i ? NS.whyDown(i) : 'مفيش كارت') };
+  const hit = NS.l2reach(c, i, (d, j) => d !== c && !d.off && !!NS.dhcpServe(d, j, i, true));
+  if (!hit) return { ok: false, msg: 'مفيش DHCP server في نفس الشبكة (الـ DHCP لا يعبر الراوتر في النسخة دي)' };
+  const l = NS.dhcpServe(hit.dev, hit.iface, i, false);
+  i.ip = l.ip; i.mask = l.mask; i.dhcp = true; if (NS.isHost(c)) { c.gw = l.gw; c.dns = l.dns; }
+  return { ok: true, lease: l, path: hit.path };
+};
+NS.resolve = (c, name) => {
+  if (NS.ip2n(name) !== null) return { ip: name };
+  if (!c.dns) return { err: 'DNS غير مضبوط على ' + c.name };
+  const r = NS.ping(c, c.dns); if (!r.ok) return { err: 'DNS server غير متاح: ' + (r.fail && r.fail.msg) };
+  const o = NS.owner(c.dns), s = o && o.d.svc && o.d.svc.dns;
+  if (!s || !s.on) return { err: 'خدمة DNS مقفولة على ' + (o ? o.d.name : c.dns) };
+  const rec = s.records.find(x => x.name.toLowerCase() === name.toLowerCase());
+  return rec ? { ip: rec.ip, via: c.dns } : { err: 'Host not found: ' + name };
+};
+NS.httpGet = (c, url) => {
+  const https = /^https:/i.test(url.trim()), host = url.trim().replace(/^https?:\/\//i, '').split('/')[0];
+  if (!host) return { err: 'اكتب عنوان أو اسم' };
+  const m = NS.mainIf(c); if (!m || !m.ip) return { err: 'الجهاز لا يملك IP' };
+  const r = NS.resolve(c, host); if (r.err) return { err: r.err };
+  const p = NS.ping(c, r.ip); if (!p.ok) return { err: 'Request Timeout: ' + (p.fail && p.fail.msg), steps: p.steps, fail: p.fail };
+  const o = NS.owner(r.ip), s = o && o.d.svc;
+  if (!s) return { err: 'Connection refused: ' + (o ? o.d.name : r.ip) + ' لا يشغّل خدمة ويب', steps: p.steps };
+  if (https ? !s.https.on : !s.http.on) return { err: 'Connection refused: خدمة ' + (https ? 'HTTPS' : 'HTTP') + ' مقفولة على ' + o.d.name, steps: p.steps };
+  return { ok: true, page: s.http.page, ip: r.ip, server: o.d.name, steps: p.steps };
+};
 
-/* ===== CLI: Cisco IOS style for router/switch, Windows style for PC ===== */
+/* ---------- save / load / merge ---------- */
+NS.migrate = d => {
+  if (!NS.MODELS[d.model]) d.model = { router: '2911', switch: '2960', pc: 'PC' }[d.type] || 'PC';
+  d.svis = d.svis || []; d.arp = d.arp || {}; d.mac = d.mac || {}; d.routes = d.routes || []; d.slots = d.slots || (NS.MODELS[d.model].slots || []).map(() => '');
+  d.host = d.host || d.name; d.off = !!d.off; d.mode = 'user'; d.ctx = null;
+  d.ifaces.forEach(i => { i.dev = d.id; i.kind = i.kind || 'eth'; if (i.kind === 'radio') i.clients = []; });
+  d.svis.forEach(i => { i.dev = d.id; i.kind = 'svi'; });
+};
+NS.serialize = () => JSON.stringify({ v: 3, seq: NS.state.seq, devices: NS.state.devices.map(d => Object.assign({}, d, { mode: 'user', ctx: null })) });
+NS.load = txt => { const o = JSON.parse(txt); if (!o || !Array.isArray(o.devices)) throw new Error('ملف غير صالح'); NS.state = { devices: o.devices, seq: o.seq || {} }; NS.state.devices.forEach(NS.migrate); NS.refresh(); };
+NS.merge = txt => {
+  const o = JSON.parse(txt); if (!o || !Array.isArray(o.devices)) throw new Error('ملف غير صالح');
+  const map = {}; o.devices.forEach(d => { map[d.id] = NS.nextId(); });
+  const maxX = Math.max(0, ...NS.state.devices.map(d => d.x)), minX = Math.min(...o.devices.map(d => d.x)), dx = maxX + 120 - minX;
+  o.devices.forEach(d => {
+    const nid = map[d.id]; d.id = nid; d.x += dx; if (NS.state.devices.some(e => e.name === d.name)) d.name += '-m';
+    d.ifaces.concat(d.svis || []).forEach(i => { if (i.link) { if (map[i.link.dev]) i.link.dev = map[i.link.dev]; else i.link = null; } });
+    NS.migrate(d); NS.state.devices.push(d);
+  });
+  NS.refresh(); return o.devices.length;
+};
+
+/* ===== CLI: IOS (router/L3 switch/L2 switch), ASA, Windows-style host ===== */
 const pre = (tok, word, min) => !!tok && tok.length >= (min || 1) && word.startsWith(tok.toLowerCase());
 const pad = (s, n) => String(s).padEnd(n, ' ');
+NS.hasCli = d => ['router', 'switch', 'firewall', 'pc'].includes(d.type) && !(d.type === 'firewall' && d.fw === 'meraki') && !(d.model === 'Home Router') && !(d.model === 'WLC') && !['Tablet', 'Smartphone', 'IP Phone', 'Printer', 'IoT Sensor', 'IoT Camera', 'IoT Controller'].includes(d.model);
 
 NS.prompt = d => {
   if (d.type === 'pc') return 'C:\\>';
-  const m = { user: '>', priv: '#', config: '(config)#', cfgif: '(config-if)#' }[d.mode];
+  const m = { user: '>', priv: '#', config: '(config)#', cfgif: '(config-if)#', dhcp: '(dhcp-config)#' }[d.mode] || '#';
   return (d.host || d.name) + m;
 };
-
+const ALIAS = { gigabitethernet: 'GigabitEthernet', fastethernet: 'FastEthernet', serial: 'Serial', vlan: 'Vlan', ethernet: 'Ethernet' };
 NS.findIface = (d, txt) => {
-  const m = /^([a-z]+)\s*(\d+(?:\/\d+)?)$/i.exec(txt.replace(/\s+/g, ''));
-  if (!m) return null; const kind = m[1].toLowerCase(), num = m[2];
-  return d.ifaces.find(i => i.name.endsWith(num) && ((d.type === 'router' && pre(kind, 'gigabitethernet', 1)) || (d.type === 'switch' && pre(kind, 'fastethernet', 1))) && (kind[0] === i.name[0].toLowerCase() || true));
+  const m = /^([a-z]+)\s*(\d+(?:\/\d+)*)$/i.exec(txt.replace(/\s+/g, '')); if (!m) return null;
+  const kind = m[1].toLowerCase(), num = m[2], full = Object.keys(ALIAS).find(k => k.startsWith(kind));
+  if (!full) return null;
+  if (full === 'vlan') return d.type === 'switch' && d.l3 ? NS.mkSvi(d, +num) : null;
+  return d.ifaces.find(i => i.name.toLowerCase().startsWith(full) && i.name.slice(full.length) === num);
 };
-
 NS.exec = (d, line) => {
   line = line.trim(); if (!line) return { out: '' };
   const t = line.split(/\s+/);
   if (d.type === 'pc') return NS.pcExec(d, t);
+  if (d.type === 'firewall') return NS.asaExec(d, t);
   return NS.iosExec(d, t);
 };
-
+const ms = () => { const k = Math.floor(Math.random() * 9); return k ? 'time=' + k + 'ms' : 'time<1ms'; };
 NS.pingText = (d, ip, win) => {
-  const arpEmpty = !Object.keys(d.arp).length;
-  const r = NS.ping(d, ip); const trace = r.steps; let out = '';
-  const ms = () => { const k = Math.floor(Math.random() * 9); return k ? 'time=' + k + 'ms' : 'time<1ms'; };
+  const arpEmpty = !Object.keys(d.arp).length, r = NS.ping(d, ip), trace = r.steps; let out = '';
   if (win) {
-    out += '\nPinging ' + ip + ' with 32 bytes of data:\n\n';
-    let got = 0;
+    out += '\nPinging ' + ip + ' with 32 bytes of data:\n\n'; let got = 0;
     for (let k = 0; k < 4; k++) {
       if (r.ok && !(arpEmpty && k === 0)) { got++; out += 'Reply from ' + ip + ': bytes=32 ' + ms() + ' TTL=' + r.ttl + '\n'; }
-      else if (!r.ok && !(r.fail.reason === 'arp' || r.fail.reason === 'ttl' || r.dir === 'reply' || r.fail.reason === 'off')) out += 'Reply from ' + (d.ifaces[0].ip || '0.0.0.0') + ': Destination host unreachable.\n';
+      else if (!r.ok && !['arp', 'ttl', 'off', 'fw', 'vpn'].includes(r.fail.reason) && r.dir !== 'reply') out += 'Reply from ' + (r.srcIp || '0.0.0.0') + ': Destination host unreachable.\n';
       else out += 'Request timed out.\n';
     }
     out += '\nPing statistics for ' + ip + ':\n    Packets: Sent = 4, Received = ' + got + ', Lost = ' + (4 - got) + ' (' + (100 - got * 25) + '% loss)';
@@ -497,65 +801,76 @@ NS.pingText = (d, ip, win) => {
   }
   return { out, trace, fail: r.ok ? null : r.fail, ok: r.ok, ping: true };
 };
-
 NS.traceText = (d, ip, win) => {
-  const f = NS.send(d, ip, 'Trace'); let out = (win ? '\nTracing route to ' + ip + ' over a maximum of 30 hops:\n\n' : 'Type escape sequence to abort.\nTracing the route to ' + ip + '\n\n');
-  const hops = f.steps.hops; let n = 0;
-  hops.forEach(h => { if (h.dev.type === 'switch') return; n++; out += '  ' + pad(n, 3) + (win ? ' <1 ms  <1 ms  <1 ms  ' : ' 0 msec 0 msec 0 msec  ') + h.ip + '\n'; });
+  const f = NS.send(d, ip, 'Trace'); let out = win ? '\nTracing route to ' + ip + ' over a maximum of 30 hops:\n\n' : 'Type escape sequence to abort.\nTracing the route to ' + ip + '\n\n', n = 0;
+  f.steps.hops.forEach(h => { if (!NS.forwards(h.dev) && h.ip !== ip) return; n++; out += '  ' + pad(n, 3) + (win ? ' <1 ms  <1 ms  <1 ms  ' : ' 0 msec 0 msec 0 msec  ') + h.ip + '\n'; });
   if (!f.ok) { n++; out += '  ' + pad(n, 3) + ' *  *  *  ' + (win ? 'Request timed out.' : '') + '\n'; }
   out += win ? '\nTrace complete.' : '';
   return { out, trace: f.steps, fail: f.ok ? null : f, ok: f.ok, ping: true };
 };
 
+/* ---------- Host ---------- */
 NS.pcExec = (d, t) => {
-  const c = t[0].toLowerCase(), i = d.ifaces[0];
-  if (c === 'help' || c === '?') return { out: 'الأوامر المتاحة:\n  ipconfig [/all]\n  ipset <ip> <mask> [gateway]   لضبط الـ IP\n  ping <ip>\n  tracert <ip>\n  arp -a\n  cls' };
+  const c = t[0].toLowerCase(), i = NS.mainIf(d);
+  if (c === 'help' || c === '?') return { out: 'الأوامر المتاحة:\n  ipconfig [/all] | ipconfig /renew   (DHCP)\n  ipset <ip> <mask> [gateway] [dns]   ضبط IP يدوي\n  ping <ip|name> | tracert <ip>\n  nslookup <name>\n  http <url>   (متصفح مبسّط)\n  arp -a | cls' };
   if (c === 'cls') return { out: '', clear: true };
+  if (!i) return { out: 'لا يوجد كارت شبكة (ركّب NIC من تبويب Physical)' };
   if (c === 'ipconfig') {
-    let o = '\nEthernet adapter ' + i.name + ':\n\n';
-    if (t[1] === '/all') o += '   Physical Address. . . . . : ' + i.mac + '\n';
-    o += '   Link Status . . . . . . . : ' + (NS.linkUp(i) ? 'Up' : 'Down (no cable)') + '\n';
-    o += '   IPv4 Address. . . . . . . : ' + (i.ip || '0.0.0.0') + '\n   Subnet Mask . . . . . . . : ' + (i.mask || '0.0.0.0') + '\n   Default Gateway . . . . . : ' + (d.gw || '0.0.0.0');
+    if (t[1] && t[1].toLowerCase() === '/renew') { const r = NS.dhcp(d, i); return r.ok ? { out: 'DHCP: تم الحصول على ' + i.ip + ' / ' + i.mask + '\nGateway: ' + (d.gw || '-') + '   DNS: ' + (d.dns || '-'), changed: true, trace: r.path.slice(1).map((x, k) => ({ from: r.path[k], to: x, label: 'DHCP', dir: 'req' })) } : { out: 'DHCP failed: ' + r.msg }; }
+    let o = '\n' + (i.kind === 'wifi' ? 'Wireless LAN adapter ' : 'Ethernet adapter ') + i.name + ':\n\n';
+    if (t[1] === '/all') o += '   Physical Address. . . . . : ' + i.mac + '\n   DHCP Enabled. . . . . . . : ' + (i.dhcp ? 'Yes' : 'No') + '\n';
+    o += '   Link Status . . . . . . . : ' + (NS.linkUp(i) ? 'Up' : 'Down (' + NS.whyDown(i) + ')') + '\n';
+    o += '   IPv4 Address. . . . . . . : ' + (i.ip || '0.0.0.0') + '\n   Subnet Mask . . . . . . . : ' + (i.mask || '0.0.0.0') + '\n   Default Gateway . . . . . : ' + (d.gw || '0.0.0.0') + '\n   DNS Server. . . . . . . . : ' + (d.dns || '0.0.0.0');
     return { out: o };
   }
   if (c === 'ipset') {
-    if (NS.ip2n(t[1]) === null || NS.maskLen(t[2]) === null) return { out: 'الاستخدام: ipset <ip> <mask> [gateway]\nمثال: ipset 192.168.1.10 255.255.255.0 192.168.1.1', changed: false };
+    if (NS.ip2n(t[1]) === null || NS.maskLen(t[2]) === null) return { out: 'الاستخدام: ipset <ip> <mask> [gateway] [dns]' };
     if (t[3] && NS.ip2n(t[3]) === null) return { out: 'Gateway غير صالح' };
-    i.ip = t[1]; i.mask = t[2]; d.gw = t[3] || ''; return { out: 'تم الضبط: ' + i.ip + ' / ' + i.mask + (d.gw ? ' gw ' + d.gw : ''), changed: true };
+    i.ip = t[1]; i.mask = t[2]; i.dhcp = false; d.gw = t[3] || ''; if (t[4]) d.dns = t[4]; return { out: 'تم الضبط: ' + i.ip + ' / ' + i.mask + (d.gw ? ' gw ' + d.gw : ''), changed: true };
   }
   if (c === 'arp') { const k = Object.keys(d.arp); return { out: k.length ? '\nInternet Address      Physical Address\n' + k.map(x => pad(x, 22) + d.arp[x]).join('\n') : 'No ARP Entries Found.' }; }
+  if (c === 'nslookup') { if (!t[1]) return { out: 'الاستخدام: nslookup <name>' }; const r = NS.resolve(d, t[1]); return { out: r.err ? '*** ' + r.err : 'Server:  ' + d.dns + '\n\nName:    ' + t[1] + '\nAddress: ' + r.ip }; }
+  if (c === 'http' || c === 'curl') {
+    if (!t[1]) return { out: 'الاستخدام: http <url|ip>   مثال: http www.test.com' };
+    const r = NS.httpGet(d, t[1]); return r.err ? { out: r.err, trace: r.steps, fail: r.fail } : { out: 'HTTP/1.1 200 OK  (' + r.server + ' ' + r.ip + ')\n\n' + r.page.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim(), trace: r.steps, ping: true, ok: true };
+  }
   if (c === 'ping' || c === 'tracert') {
-    if (NS.ip2n(t[1]) === null) return { out: 'الاستخدام: ' + c + ' <ip>' };
-    if (!i.ip) return { out: 'PC لا يملك IP. استخدم ipset أولاً.' };
-    return c === 'ping' ? NS.pingText(d, t[1], true) : NS.traceText(d, t[1], true);
+    if (!t[1]) return { out: 'الاستخدام: ' + c + ' <ip|name>' };
+    if (!i.ip) return { out: 'الجهاز لا يملك IP. استخدم ipset أو ipconfig /renew.' };
+    const r = NS.resolve(d, t[1]); if (r.err) return { out: 'Ping request could not find host ' + t[1] + '. ' + r.err };
+    return c === 'ping' ? NS.pingText(d, r.ip, true) : NS.traceText(d, r.ip, true);
   }
   return { out: "'" + t[0] + "' is not recognized as an internal or external command.\nاكتب help لعرض الأوامر." };
 };
 
-NS.showIfBrief = d => 'Interface              IP-Address      OK? Method Status                Protocol\n' + d.ifaces.map(i => {
-  const up = NS.linkUp(i); const st = i.shut ? 'administratively down' : (i.link ? 'up' : 'down');
-  return pad(i.name, 23) + pad(i.ip || 'unassigned', 16) + 'YES manual ' + pad(st, 22) + (up ? 'up' : 'down');
-}).join('\n');
-
+/* ---------- show helpers ---------- */
+NS.stat = i => { const up = NS.linkUp(i); return { st: i.shut ? 'administratively down' : (up || i.kind === 'svi' ? (up ? 'up' : 'down') : (i.link ? 'up' : 'down')), pr: up ? 'up' : 'down' }; };
+NS.showIfBrief = d => 'Interface              IP-Address      OK? Method Status                Protocol\n' + NS.allIfs(d).filter(i => i.kind !== 'console' && i.kind !== 'radio').map(i => { const s = NS.stat(i); return pad(i.name, 23) + pad(i.ip || 'unassigned', 16) + 'YES manual ' + pad(s.st, 22) + s.pr; }).join('\n');
 NS.showRoute = d => {
-  let o = 'Codes: C - connected, S - static\n\n'; const rows = [];
-  d.ifaces.forEach(i => { if (i.ip && !i.shut && NS.linkUp(i)) rows.push('C    ' + NS.n2ip(NS.net(i.ip, i.mask)) + '/' + NS.maskLen(i.mask) + ' is directly connected, ' + i.name); });
+  const rows = [];
+  NS.ipIfs(d).forEach(i => { if (i.ip && i.mask && !i.shut && NS.linkUp(i)) rows.push('C    ' + NS.n2ip(NS.net(i.ip, i.mask)) + '/' + NS.maskLen(i.mask) + ' is directly connected, ' + i.name); });
   d.routes.forEach(r => rows.push('S    ' + r.net + '/' + NS.maskLen(r.mask) + ' [1/0] via ' + r.via));
-  return o + (rows.length ? rows.join('\n') : '(الجدول فاضي)');
+  return 'Codes: C - connected, S - static\n\n' + (rows.length ? rows.join('\n') : '(الجدول فاضي)');
 };
-
 NS.showRun = d => {
   let o = 'hostname ' + (d.host || d.name) + '\n!\n';
-  d.ifaces.forEach(i => {
+  if (d.routing && d.type === 'switch') o += 'ip routing\n!\n';
+  (d.dhcpExcl || []).forEach(x => o += 'ip dhcp excluded-address ' + x.from + ' ' + (x.to || x.from) + '\n');
+  (d.dhcpPools || []).forEach(p => { o += 'ip dhcp pool ' + p.name + '\n network ' + p.net + ' ' + p.mask + '\n default-router ' + (p.gw || '-') + '\n' + (p.dns ? ' dns-server ' + p.dns + '\n' : '') + '!\n'; });
+  NS.allIfs(d).filter(i => i.kind !== 'console' && i.kind !== 'radio').forEach(i => {
     o += 'interface ' + i.name + '\n';
-    if (d.type === 'switch') { if (i.vlan !== 1) o += ' switchport access vlan ' + i.vlan + '\n'; }
-    else o += i.ip ? ' ip address ' + i.ip + ' ' + i.mask + '\n' : ' no ip address\n';
+    if (d.type === 'switch' && i.kind !== 'svi' && i.vlan !== 1) o += ' switchport access vlan ' + i.vlan + '\n';
+    if (i.clock) o += ' clock rate ' + i.clock + '\n';
+    if (d.type !== 'switch' || i.kind === 'svi') o += i.ip ? ' ip address ' + i.ip + ' ' + i.mask + '\n' : ' no ip address\n';
+    if (d.nat && d.nat === i.name) o += ' ip nat outside\n';
     o += i.shut ? ' shutdown\n' : ' no shutdown\n'; o += '!\n';
   });
   d.routes.forEach(r => o += 'ip route ' + r.net + ' ' + r.mask + ' ' + r.via + '\n');
   return o.trim();
 };
+const chg = (i, up) => '%LINK-5-CHANGED: Interface ' + i.name + ', changed state to ' + up + '\n%LINEPROTO-5-UPDOWN: Line protocol on Interface ' + i.name + ', changed state to ' + (up === 'up' ? 'up' : 'down');
 
+/* ---------- IOS ---------- */
 NS.iosExec = (d, t) => {
   const c = t[0].toLowerCase(), a = t[1] || '', mode = d.mode, bad = { out: '% Invalid input detected. اكتب ? للمساعدة' };
   if (c === '?' || c === 'help') return { out: NS.iosHelp(d) };
@@ -564,60 +879,113 @@ NS.iosExec = (d, t) => {
     if (mode === 'priv' && pre(c, 'disable', 4)) { d.mode = 'user'; return { out: '' }; }
     if (mode === 'priv' && pre(c, 'configure', 4)) { if (!pre(a, 'terminal', 1)) return { out: '% Incomplete command. جرّب: configure terminal' }; d.mode = 'config'; return { out: 'Enter configuration commands, one per line.  End with CNTL/Z.' }; }
     if (pre(c, 'exit', 2) || c === 'logout') { d.mode = 'user'; return { out: '' }; }
-    if (pre(c, 'ping', 2) || pre(c, 'traceroute', 5) || pre(c, 'trace', 5)) {
-      if (NS.ip2n(a) === null) return { out: '% الاستخدام: ' + c + ' <ip>' };
-      return pre(c, 'ping', 2) ? NS.pingText(d, a, false) : NS.traceText(d, a, false);
-    }
-    if (pre(c, 'show', 2) || (mode === 'priv' && c === 'sh')) {
+    if (pre(c, 'ping', 2) || pre(c, 'traceroute', 5) || pre(c, 'trace', 5)) { if (NS.ip2n(a) === null) return { out: '% الاستخدام: ' + c + ' <ip>' }; return pre(c, 'ping', 2) ? NS.pingText(d, a, false) : NS.traceText(d, a, false); }
+    if (pre(c, 'show', 2) || c === 'sh') {
       const s = t.slice(1).join(' ').toLowerCase();
       if (/^ip\s+int\w*\s+br\w*$/.test(s)) return { out: NS.showIfBrief(d) };
-      if (/^ip\s+ro\w*$/.test(s) && d.type === 'router') return { out: NS.showRoute(d) };
+      if (/^ip\s+ro\w*$/.test(s) && (d.type === 'router' || d.routing)) return { out: NS.showRoute(d) };
       if (/^arp$/.test(s)) { const k = Object.keys(d.arp); return { out: 'Protocol  Address          Hardware Addr\n' + k.map(x => pad('Internet', 10) + pad(x, 17) + d.arp[x]).join('\n') }; }
       if (/^mac\s+address-table$|^mac-address-table$/.test(s) && d.type === 'switch') { const k = Object.keys(d.mac); return { out: 'Vlan    Mac Address       Ports\n' + k.map(x => pad(d.mac[x].vlan, 8) + pad(x, 18) + d.mac[x].port).join('\n') }; }
-      if (/^vlan\s+br\w*$/.test(s) && d.type === 'switch') { const g = {}; d.ifaces.forEach(i => (g[i.vlan] = g[i.vlan] || []).push(i.name)); return { out: 'VLAN Ports\n' + Object.keys(g).map(v => pad(v, 5) + g[v].join(', ')).join('\n') }; }
+      if (/^vlan\s+br\w*$/.test(s) && d.type === 'switch') { const g = {}; d.ifaces.filter(i => i.kind !== 'console' && i.kind !== 'radio').forEach(i => (g[i.vlan] = g[i.vlan] || []).push(NS.short(i.name))); return { out: 'VLAN Ports\n' + Object.keys(g).map(v => pad(v, 5) + g[v].join(', ')).join('\n') }; }
+      if (/^ip\s+dhcp\s+bind\w*$/.test(s)) return { out: 'Mac Address        IP address\n' + Object.keys(d.leases || {}).map(m => pad(m, 19) + d.leases[m]).join('\n') };
       if (/^run\w*(-config)?$/.test(s) && mode === 'priv') return { out: NS.showRun(d) };
       return bad;
     }
     return bad;
   }
-  if (pre(c, 'end', 3) || (c === 'exit' && mode === 'config')) { d.mode = c === 'end' ? 'priv' : 'priv'; d.ctx = null; return { out: '', changed: true }; }
-  if (mode === 'cfgif' && pre(c, 'exit', 2)) { d.mode = 'config'; d.ctx = null; return { out: '' }; }
+  if (pre(c, 'end', 3) || (c === 'exit' && mode === 'config')) { d.mode = 'priv'; d.ctx = null; return { out: '', changed: true }; }
+  if ((mode === 'cfgif' || mode === 'dhcp') && pre(c, 'exit', 2)) { d.mode = 'config'; d.ctx = null; return { out: '' }; }
   if (mode === 'config') {
     if (pre(c, 'hostname', 2)) { if (!a) return { out: '% Incomplete command.' }; d.host = a; return { out: '', changed: true }; }
     if (pre(c, 'interface', 2)) { const i = NS.findIface(d, t.slice(1).join('')); if (!i) return { out: '% Invalid interface. مثال: ' + d.ifaces[0].name }; d.ctx = i.name; d.mode = 'cfgif'; return { out: '' }; }
     if (pre(c, 'vlan', 2)) return { out: '' };
-    if (c === 'ip' && pre(a, 'route', 2) && d.type === 'router') {
+    if (c === 'ip' && a === 'routing' && d.type === 'switch') { if (!d.l3) return { out: '% Invalid input (السويتش ده Layer 2)' }; d.routing = true; return { out: '', changed: true }; }
+    if (c === 'no' && a === 'ip' && t[2] === 'routing') { d.routing = false; return { out: '', changed: true }; }
+    if (c === 'ip' && pre(a, 'route', 2) && (d.type === 'router' || d.routing)) {
       if (NS.ip2n(t[2]) === null || NS.maskLen(t[3]) === null || NS.ip2n(t[4]) === null) return { out: '% الاستخدام: ip route <net> <mask> <next-hop>' };
       d.routes.push({ net: NS.n2ip(NS.net(t[2], t[3])), mask: t[3], via: t[4] }); return { out: '', changed: true };
     }
     if (c === 'no' && a === 'ip' && pre(t[2], 'route', 2)) { d.routes = d.routes.filter(r => !(r.net === t[3] && r.mask === t[4])); return { out: '', changed: true }; }
+    if (c === 'ip' && pre(a, 'dhcp', 2) && d.dhcpPools) {
+      if (pre(t[2], 'pool', 1) && t[3]) { let p = d.dhcpPools.find(x => x.name === t[3]); if (!p) d.dhcpPools.push(p = { name: t[3], net: '', mask: '', gw: '', dns: '' }); d.ctx = p.name; d.mode = 'dhcp'; return { out: '' }; }
+      if (pre(t[2], 'excluded-address', 1) && NS.ip2n(t[3]) !== null) { d.dhcpExcl.push({ from: t[3], to: t[4] || t[3] }); return { out: '', changed: true }; }
+    }
+    if (c === 'ip' && a === 'nat' && d.type === 'router') { if (t[2] === 'outside' && t[3]) { d.nat = t[3]; return { out: '', changed: true }; } }
+    return bad;
+  }
+  if (mode === 'dhcp') {
+    const p = d.dhcpPools.find(x => x.name === d.ctx);
+    if (pre(c, 'network', 2) && NS.ip2n(a) !== null && NS.maskLen(t[2]) !== null) { p.net = NS.n2ip(NS.net(a, t[2])); p.mask = t[2]; return { out: '', changed: true }; }
+    if (pre(c, 'default-router', 2) && NS.ip2n(a) !== null) { p.gw = a; return { out: '', changed: true }; }
+    if (pre(c, 'dns-server', 2) && NS.ip2n(a) !== null) { p.dns = a; return { out: '', changed: true }; }
     return bad;
   }
   if (mode === 'cfgif') {
     const i = NS.iface(d, d.ctx);
-    if (c === 'ip' && pre(a, 'address', 2) && d.type === 'router') {
+    if (c === 'ip' && pre(a, 'address', 2) && (d.type === 'router' || i.kind === 'svi')) {
       if (NS.ip2n(t[2]) === null || NS.maskLen(t[3]) === null) return { out: '% Invalid IP address أو Mask' };
       i.ip = t[2]; i.mask = t[3]; return { out: '', changed: true };
     }
     if (c === 'no' && a === 'ip') { i.ip = ''; i.mask = ''; return { out: '', changed: true }; }
-    if (pre(c, 'shutdown', 3)) { i.shut = true; return { out: '%LINK-5-CHANGED: Interface ' + i.name + ', changed state to administratively down\n%LINEPROTO-5-UPDOWN: Line protocol on Interface ' + i.name + ', changed state to down', changed: true }; }
-    if (c === 'no' && pre(a, 'shutdown', 3)) { i.shut = false; return { out: NS.linkUp(i) ? '%LINK-5-CHANGED: Interface ' + i.name + ', changed state to up\n%LINEPROTO-5-UPDOWN: Line protocol on Interface ' + i.name + ', changed state to up' : '', changed: true }; }
+    if (pre(c, 'shutdown', 3)) { i.shut = true; return { out: chg(i, 'administratively down'), changed: true }; }
+    if (c === 'no' && pre(a, 'shutdown', 3)) { i.shut = false; return { out: NS.linkUp(i) ? chg(i, 'up') : '', changed: true }; }
+    if (c === 'clock' && pre(a, 'rate', 1) && i.kind === 'serial') { i.clock = parseInt(t[2], 10) || 64000; return { out: '', changed: true }; }
     if (pre(c, 'switchport', 3) && d.type === 'switch') {
       if (pre(a, 'mode', 1)) return { out: '' };
       if (pre(a, 'access', 1) && pre(t[2], 'vlan', 1)) { const v = parseInt(t[3], 10); if (!(v >= 1 && v <= 4094)) return { out: '% VLAN غير صالح (1-4094)' }; i.vlan = v; return { out: '', changed: true }; }
     }
-    if (pre(c, 'description', 2)) return { out: '' };
+    if (c === 'no' && a === 'switchport') return { out: '', changed: true };
+    if (pre(c, 'description', 2) || pre(c, 'duplex', 2) || pre(c, 'speed', 2)) return { out: '' };
     return bad;
   }
   return bad;
 };
-
 NS.iosHelp = d => {
   const m = d.mode;
   if (m === 'user') return 'enable | ping <ip> | traceroute <ip> | show ip interface brief | show ip route | show arp';
   if (m === 'priv') return 'configure terminal | show running-config | show ip interface brief | show ip route | show arp' + (d.type === 'switch' ? ' | show mac address-table | show vlan brief' : '') + ' | ping | traceroute | disable';
-  if (m === 'config') return 'hostname <name> | interface <name> | ip route <net> <mask> <next-hop> | end';
-  return (d.type === 'router' ? 'ip address <ip> <mask> | ' : 'switchport access vlan <n> | ') + 'shutdown | no shutdown | exit | end';
+  if (m === 'config') return 'hostname <name> | interface <name> | ip route <net> <mask> <next-hop> | ip dhcp pool <name> | ip dhcp excluded-address <from> [to]' + (d.type === 'router' ? ' | ip nat outside <interface>' : '') + (d.l3 ? ' | ip routing | interface vlan <n>' : '') + ' | end';
+  if (m === 'dhcp') return 'network <net> <mask> | default-router <ip> | dns-server <ip> | exit';
+  return (d.type === 'router' ? 'ip address <ip> <mask> | ' : (d.l3 ? 'ip address <ip> <mask> (على interface vlan) | ' : '') + 'switchport access vlan <n> | ') + 'clock rate <n> (Serial DCE) | shutdown | no shutdown | exit | end';
+};
+
+/* ---------- ASA ---------- */
+NS.asaExec = (d, t) => {
+  const c = t[0].toLowerCase(), a = t[1] || '', mode = d.mode, bad = { out: 'ERROR: % Invalid input detected' };
+  if (c === '?' || c === 'help') return { out: mode === 'cfgif' ? 'nameif <name> | security-level <0-100> | ip address <ip> <mask> | no shutdown | shutdown | exit' : 'enable | configure terminal | interface <name> | nat outside <interface> | icmp permit any | crypto vpn ... | show interface ip brief | show run | ping <ip>' };
+  if (mode === 'user' || mode === 'priv') {
+    if (mode === 'user' && pre(c, 'enable', 2)) { d.mode = 'priv'; return { out: '' }; }
+    if (mode === 'priv' && pre(c, 'configure', 4)) { d.mode = 'config'; return { out: '' }; }
+    if (pre(c, 'ping', 2)) { if (NS.ip2n(a) === null) return { out: 'Usage: ping <ip>' }; return NS.pingText(d, a, false); }
+    if (pre(c, 'show', 2)) {
+      const s = t.slice(1).join(' ').toLowerCase();
+      if (/^int\w*\s+ip\s+br\w*$/.test(s)) return { out: NS.showIfBrief(d) };
+      if (/^ro\w*$/.test(s)) return { out: NS.showRoute(d) };
+      if (/^run\w*/.test(s)) return { out: 'hostname ' + d.host + '\n' + NS.dataIfaces(d).map(i => 'interface ' + i.name + '\n nameif ' + (i.nameif || '-') + '\n security-level ' + (i.level || 0) + '\n ip address ' + (i.ip ? i.ip + ' ' + i.mask : 'none') + (i.shut ? '\n shutdown' : '')).join('\n!\n') + (d.nat ? '\nnat (inside,outside) dynamic interface  [outside=' + d.nat + ']' : '') + (d.allowIcmp ? '\nicmp permit any' : '') };
+      return bad;
+    }
+    return bad;
+  }
+  if (pre(c, 'end', 3) || c === 'exit') { d.mode = mode === 'cfgif' ? 'config' : 'priv'; d.ctx = null; return { out: '', changed: true }; }
+  if (mode === 'config') {
+    if (pre(c, 'hostname', 2) && a) { d.host = a; return { out: '', changed: true }; }
+    if (pre(c, 'interface', 2)) { const i = NS.iface(d, t.slice(1).join('')) || NS.findIface(d, t.slice(1).join('')); if (!i) return { out: 'ERROR: Invalid interface' }; d.ctx = i.name; d.mode = 'cfgif'; return { out: '' }; }
+    if (c === 'nat' && a === 'outside') { const i = NS.iface(d, t[2] || ''); if (!i) return { out: 'ERROR: اكتب اسم الـ interface الخارجي' }; d.nat = i.name; return { out: '', changed: true }; }
+    if (c === 'icmp' && a === 'permit') { d.allowIcmp = true; return { out: '', changed: true }; }
+    if (c === 'no' && a === 'icmp') { d.allowIcmp = false; return { out: '', changed: true }; }
+    if (c === 'route' && NS.ip2n(t[3]) !== null && NS.ip2n(t[4]) !== null) { d.routes.push({ net: NS.n2ip(NS.net(t[3], t[4])), mask: t[4], via: t[5] }); return { out: '', changed: true }; }
+    return bad;
+  }
+  if (mode === 'cfgif') {
+    const i = NS.iface(d, d.ctx);
+    if (pre(c, 'nameif', 2) && a) { i.nameif = a; return { out: '', changed: true }; }
+    if (pre(c, 'security-level', 2)) { const v = parseInt(a, 10); if (!(v >= 0 && v <= 100)) return { out: 'ERROR: 0-100' }; i.level = v; return { out: '', changed: true }; }
+    if (c === 'ip' && pre(a, 'address', 2)) { if (NS.ip2n(t[2]) === null || NS.maskLen(t[3]) === null) return { out: 'ERROR: Invalid IP/mask' }; i.ip = t[2]; i.mask = t[3]; return { out: '', changed: true }; }
+    if (pre(c, 'shutdown', 3)) { i.shut = true; return { out: '', changed: true }; }
+    if (c === 'no' && pre(a, 'shutdown', 3)) { i.shut = false; return { out: '', changed: true }; }
+    return bad;
+  }
+  return bad;
 };
 /* ===== Ready-made scenarios ===== */
 NS.scenarios = {
@@ -639,9 +1007,64 @@ NS.scenarios = {
     NS.setIp(a, '10.1.0.10', '255.255.255.0', '10.1.0.1'); NS.setIp(b, '10.3.0.10', '255.255.255.0', '10.3.0.1');
     r1.routes.push({ net: '10.3.0.0', mask: '255.255.255.0', via: '10.12.0.2' }); r3.routes.push({ net: '10.1.0.0', mask: '255.255.255.0', via: '10.23.0.2' }); } }
 };
+
+NS.scenarios.wifi = { name: 'WiFi + DHCP (Home Router)', desc: 'Home Router بيوزع IP تلقائي على Laptop (سلكي) وSmartphone (WiFi، SSID: HomeNet). Tablet0 بعيد عن المدى، قرّبه وشوف الاتصال يتعمل. جرّب ipconfig /renew وبعدين ping 192.168.0.1.', build() {
+  const r = NS.addDevice('Home Router', 300, 120), l = NS.addDevice('Laptop', 120, 250), p = NS.addDevice('Smartphone', 420, 230), t = NS.addDevice('Tablet', 640, 250);
+  NS.connect(l, r, 'straight'); [p, t].forEach(x => { x.ifaces[0].wifi = { ssid: 'HomeNet', psk: '' }; }); NS.refresh(); } };
+NS.scenarios.srv = { name: 'Server: DNS + HTTP + DHCP', desc: 'Server0 فيه DNS (www.netlab.com) وHTTP وDHCP. PC0 جهازه DHCP: افتح Desktop ← IP Configuration ← DHCP، وبعدين Web Browser واكتب www.netlab.com.', build() {
+  const s = NS.addDevice('2960', 250, 150), sv = NS.addDevice('Server', 250, 40), a = NS.addDevice('PC', 100, 270), b = NS.addDevice('Laptop', 400, 270);
+  NS.connect(sv, s); NS.connect(a, s); NS.connect(b, s);
+  const si = NS.mainIf(sv); si.ip = '192.168.1.10'; si.mask = '255.255.255.0'; const v = sv.svc;
+  v.dns.on = true; v.dns.records.push({ name: 'www.netlab.com', ip: '192.168.1.10' }); v.dhcp.on = true; v.dhcp.pool.start = '192.168.1.100'; v.dhcp.pool.gw = ''; v.dhcp.pool.dns = '192.168.1.10'; } };
+NS.scenarios.wan = { name: 'WAN: Serial بين راوترين', desc: 'Router0 وRouter1 متوصلين Serial (HWIC-2T). فاضل clock rate على طرف الـ DCE: على Router0 اكتب interface Serial0/0/0 ثم clock rate 64000.', build() {
+  const a = NS.addDevice('1941', 120, 130), b = NS.addDevice('1941', 420, 130), p = NS.addDevice('PC', 120, 270), q = NS.addDevice('PC', 420, 270);
+  [a, b].forEach(r => { r.off = true; NS.setModule(r, 0, 'HWIC-2T'); r.off = false; });
+  NS.connect(a, b, 'serial-dce'); NS.connect(a, p, 'cross'); NS.connect(b, q, 'cross');
+  const sa = a.ifaces.find(i => i.kind === 'serial'), sb = b.ifaces.find(i => i.kind === 'serial');
+  NS.setIf(sa, '10.0.0.1', '255.255.255.252'); NS.setIf(sb, '10.0.0.2', '255.255.255.252'); NS.setIf(a.ifaces[0], '192.168.1.1', '255.255.255.0'); NS.setIf(b.ifaces[0], '192.168.2.1', '255.255.255.0');
+  NS.setIp(p, '192.168.1.10', '255.255.255.0', '192.168.1.1'); NS.setIp(q, '192.168.2.10', '255.255.255.0', '192.168.2.1');
+  a.routes.push({ net: '192.168.2.0', mask: '255.255.255.0', via: '10.0.0.2' }); b.routes.push({ net: '192.168.1.0', mask: '255.255.255.0', via: '10.0.0.1' }); } };
+NS.scenarios.fw = { name: 'Firewall ASA (inside / outside)', desc: 'ASA بين PC0 (inside) وServer (outside). من inside للـ outside بيمر، والعكس محجوب. فعّل icmp permit any من CLI الـ ASA وجرّب تاني.', build() {
+  const f = NS.addDevice('ASA 5506', 300, 130), a = NS.addDevice('PC', 120, 250), sv = NS.addDevice('Server', 480, 250);
+  const [o, i] = [f.ifaces[0], f.ifaces[1]]; NS.connect(f, sv, 'cross', o.name, 'FastEthernet0'); NS.connect(f, a, 'cross', i.name, 'FastEthernet0');
+  NS.setIf(o, '200.0.0.1', '255.255.255.0'); NS.setIf(i, '192.168.1.1', '255.255.255.0');
+  NS.setIp(a, '192.168.1.10', '255.255.255.0', '192.168.1.1'); NS.setIp(sv, '200.0.0.10', '255.255.255.0', '200.0.0.1'); } };
+
+/* ===== City: 12 companies + 6 homes around a 3650 core ===== */
+NS.CITY = ['Bank', 'Telecom', 'Soft', 'Media', 'Oil', 'Tech', 'Pharma', 'Logix', 'Energy', 'Foods', 'Air', 'Steel'];
+NS.scenarios.city = { name: 'مدينة كاملة: 12 شركة + 6 منازل', desc: '12 شركة (راوتر + سويتش + أجهزة) و6 منازل (Home Router + Laptop + Smartphone WiFi) متصلين بنواة المدينة City-Core (سويتش 3650 Layer 3). جرّب من Bank-PC1: ping 192.168.2.10 (شركة Telecom) أو http www.city.com. الخريطة كبيرة: كبّر بإصبعين وحرّك.', build() {
+  const P = (r, deg, off) => { const a = deg * Math.PI / 180; return [Math.round(r * Math.cos(a) - (off || 0) * Math.sin(a)), Math.round(r * Math.sin(a) + (off || 0) * Math.cos(a))]; };
+  const core = NS.addDevice('3650', 0, 0); core.name = core.host = 'City-Core'; core.routing = true;
+  const port = k => 'GigabitEthernet1/0/' + k, MASK = '255.255.255.0', M30 = '255.255.255.252';
+  const svr = [];
+  NS.CITY.forEach((nm, k) => {
+    const n = k + 1, ang = k * 30 - 75, at = (r, off) => P(r, ang, off);
+    const mk = (model, pos, name) => { const d = NS.addDevice(model, pos[0], pos[1]); d.name = name; if (d.type !== 'pc') d.host = name; return d; };
+    const r = mk('2911', at(650), nm + '-GW'), sw = mk('2960', at(780), nm + '-SW'), a = mk('PC', at(910, -60), nm + '-PC1'), b = mk('Laptop', at(910, 60), nm + '-PC2');
+    NS.connect(r, sw, 'straight', 'GigabitEthernet0/0', 'FastEthernet0/1'); NS.connect(a, sw, 'straight', null, 'FastEthernet0/2'); NS.connect(b, sw, 'straight', null, 'FastEthernet0/3');
+    NS.connect(r, core, 'straight', 'GigabitEthernet0/1', port(n)); NS.iface(core, port(n)).vlan = 100 + n;
+    NS.setIf(r.ifaces[0], '192.168.' + n + '.1', MASK); NS.setIf(r.ifaces[1], '10.0.' + n + '.2', M30);
+    r.routes.push({ net: '0.0.0.0', mask: '0.0.0.0', via: '10.0.' + n + '.1' });
+    const sv = NS.mkSvi(core, 100 + n); sv.ip = '10.0.' + n + '.1'; sv.mask = M30;
+    core.routes.push({ net: '192.168.' + n + '.0', mask: MASK, via: '10.0.' + n + '.2' });
+    NS.setIp(a, '192.168.' + n + '.10', MASK, '192.168.' + n + '.1'); NS.setIp(b, '192.168.' + n + '.11', MASK, '192.168.' + n + '.1'); a.dns = b.dns = '192.168.1.5';
+    svr.push([nm.toLowerCase() + '.city.com', '192.168.' + n + '.10']);
+    if (n === 1) { const s = mk('Server', at(960, 150), 'City-Portal'); NS.connect(s, sw, 'straight', null, 'FastEthernet0/4'); NS.setIp(s, '192.168.1.5', MASK, '192.168.1.1'); s.dns = '192.168.1.5'; s.svc.dns.on = true; s.svc.http.page = '<html><body><h1>City Portal</h1><p>Welcome to the city network.</p></body></html>'; s.svc.dns.records.push({ name: 'www.city.com', ip: '192.168.1.5' }); }
+  });
+  const portal = NS.state.devices.find(d => d.name === 'City-Portal'); svr.forEach(x => portal.svc.dns.records.push({ name: x[0], ip: x[1] }));
+  for (let h = 1; h <= 6; h++) {
+    const ang = (h - 1) * 60 + 15, at = (r, off) => P(r, ang, off), c = 100 + 12 + h;
+    const hr = NS.addDevice('Home Router', ...at(330)); hr.name = hr.host = 'Home' + h + '-R'; hr.wifi = { ssid: 'Home' + h, psk: '' }; hr.dhcpPools[0].dns = '192.168.1.5';
+    const lp = NS.addDevice('Laptop', ...at(450, -45)); lp.name = 'Home' + h + '-Laptop'; const ph = NS.addDevice('Smartphone', ...at(450, 55)); ph.name = 'Home' + h + '-Phone'; ph.ifaces[0].wifi = { ssid: 'Home' + h, psk: '' };
+    NS.connect(lp, hr, 'straight'); NS.connect(hr, core, 'straight', 'Internet', port(12 + h)); NS.iface(core, port(12 + h)).vlan = c;
+    const w = NS.iface(hr, 'Internet'); w.ip = '100.64.' + h + '.2'; w.mask = M30; hr.routes.push({ net: '0.0.0.0', mask: '0.0.0.0', via: '100.64.' + h + '.1' });
+    const sv = NS.mkSvi(core, c); sv.ip = '100.64.' + h + '.1'; sv.mask = M30;
+    NS.refresh(); NS.dhcp(lp); NS.dhcp(ph);
+  }
+} };
 NS.setIf = (i, ip, mask) => { i.ip = ip; i.mask = mask; i.shut = false; };
-NS.setIp = (d, ip, mask, gw) => { d.ifaces[0].ip = ip; d.ifaces[0].mask = mask; d.gw = gw || ''; };
-NS.loadScenario = k => { NS.fresh(); NS.scenarios[k].build(); };
+NS.setIp = (d, ip, mask, gw) => { const m = NS.mainIf(d); m.ip = ip; m.mask = mask; d.gw = gw || ''; };
+NS.loadScenario = k => { NS.fresh(); NS.scenarios[k].build(); NS.refresh(); };
 /* ===== UI 1: workspace canvas, tools, cabling ===== */
 const $ = s => document.querySelector(s);
 const svg = $('#cv'), world = $('#world'), gDev = $('#gDev'), gLinks = $('#gLinks'), gPkt = $('#gPkt'), gGrid = $('#gGrid');
@@ -649,11 +1072,11 @@ const SVGNS = 'http://www.w3.org/2000/svg';
 const view = { x: 0, y: 0, k: 1 };
 let tool = 'select', placing = null, cableType = 'auto', pendingCable = null, pduSrc = null, toastT = 0;
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-const CAB_AR = { auto: 'Auto', straight: 'Copper Straight-Through', cross: 'Copper Cross-Over', fiber: 'Fiber' };
+const CAB_AR = { auto: 'Auto', console: 'Console', straight: 'Copper Straight-Through', cross: 'Copper Cross-Over', fiber: 'Fiber', serial: 'Serial', 'serial-dce': 'Serial DCE', 'serial-dte': 'Serial DTE', coax: 'Coaxial', phone: 'Phone', wireless: 'Wireless' };
 
 function toast(msg, kind) { const t = $('#toast'); t.textContent = msg; t.className = 'toast show ' + (kind || ''); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), 3800); }
 function applyView() { world.setAttribute('transform', `translate(${view.x} ${view.y}) scale(${view.k})`); }
-function save() { try { localStorage.setItem('netlab-v2', NS.serialize()); } catch (e) { } }
+function save() { try { localStorage.setItem('netlab-v4', NS.serialize()); } catch (e) { } }
 
 function initGrid() {
   const defs = document.createElementNS(SVGNS, 'defs');
@@ -662,32 +1085,51 @@ function initGrid() {
   gGrid.innerHTML = '<rect x="-4000" y="-4000" width="8000" height="8000" fill="url(#gp)"/>';
 }
 
-/* device artwork, used on canvas, in the palette and in windows */
+/* device artwork */
+const wifiMark = (x, y) => `<g transform="translate(${x} ${y})" fill="none" stroke="var(--ink)" stroke-width="1.8" stroke-linecap="round"><path d="M-7 -2a10 10 0 0114 0M-4 1.5a5.5 5.5 0 018 0"/><circle r="1.3" cy="5" fill="var(--ink)"/></g>`;
 function glyph(d) {
-  const m = d.model || d.type;
-  if (d.type === 'pc' && m === 'Laptop') return '<g class="d-shadow"><rect class="d-body" x="-21" y="-20" width="42" height="26" rx="4"/><rect x="-17" y="-16" width="34" height="18" rx="2" fill="url(#sg)"/><path class="d-body" d="M-27 6h54l-4 9h-46z"/></g>';
-  if (d.type === 'pc' && m === 'Server') return '<g class="d-shadow"><rect class="d-body" x="-14" y="-24" width="28" height="46" rx="4"/><path class="d-line" d="M-14 -9H14M-14 6H14"/><circle class="led" cx="-7" cy="-16" r="2"/><circle class="led" cx="-7" cy="-1" r="2"/><circle class="led off" cx="-7" cy="14" r="2"/><path class="d-line" d="M0 -16h8M0 -1h8"/></g>';
-  if (d.type === 'pc') return '<g class="d-shadow"><rect class="d-body" x="-22" y="-23" width="44" height="30" rx="5"/><rect x="-18" y="-19" width="36" height="22" rx="2.5" fill="url(#sg)"/><path class="d-body" d="M-5 7h10l2 9h-14z"/><rect class="d-body" x="-15" y="16" width="30" height="4" rx="2"/></g>';
-  if (d.type === 'switch') {
-    let p = ''; const n = d.ifaces.length || 8; for (let k = 0; k < n; k++) { const x = -25 + k * 6.9, i = d.ifaces[k]; p += `<rect class="d-line" fill="var(--work)" x="${x}" y="1" width="4.6" height="7" rx="1"/><circle class="led ${i && NS.linkUp(i) ? '' : 'off'}" cx="${x + 2.3}" cy="-6" r="1.7"/>`; }
-    return '<g class="d-shadow"><rect class="d-body" x="-30" y="-14" width="60" height="28" rx="6"/>' + p + '</g>';
+  const m = d.model || d.type, t = d.type;
+  const scr = (x, y, w, h) => `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="2" fill="url(#sg)"/>`;
+  if (t === 'pc') {
+    if (m === 'Laptop') return '<g class="d-shadow"><rect class="d-body" x="-21" y="-20" width="42" height="26" rx="4"/>' + scr(-17, -16, 34, 18) + '<path class="d-body" d="M-27 6h54l-4 9h-46z"/></g>';
+    if (m === 'Server') return '<g class="d-shadow"><rect class="d-body" x="-14" y="-24" width="28" height="46" rx="4"/><path class="d-line" d="M-14 -9H14M-14 6H14"/><circle class="led" cx="-7" cy="-16" r="2"/><circle class="led" cx="-7" cy="-1" r="2"/><circle class="led off" cx="-7" cy="14" r="2"/><path class="d-line" d="M0 -16h8M0 -1h8"/></g>';
+    if (m === 'Tablet') return '<g class="d-shadow"><rect class="d-body" x="-18" y="-22" width="36" height="44" rx="5"/>' + scr(-14, -17, 28, 32) + '<circle class="d-line" cx="0" cy="18.5" r="1.6"/></g>';
+    if (m === 'Smartphone') return '<g class="d-shadow"><rect class="d-body" x="-12" y="-23" width="24" height="46" rx="6"/>' + scr(-9, -17, 18, 32) + '<circle class="d-line" cx="0" cy="19" r="1.5"/></g>';
+    if (m === 'IP Phone') return '<g class="d-shadow"><path class="d-body" d="M-22 14l4-24h36l4 24z"/>' + scr(-12, -8, 24, 8) + '<path class="d-line" d="M-12 6h4M-2 6h4M8 6h4"/><path class="d-body" d="M-24 -12q24 -14 48 0v-6q-24 -14 -48 0z"/></g>';
+    if (m === 'Printer') return '<g class="d-shadow"><rect class="d-body" x="-22" y="-6" width="44" height="22" rx="4"/><rect class="d-body" x="-14" y="-20" width="28" height="14" rx="1"/><rect fill="var(--work)" class="d-line" x="-12" y="6" width="24" height="12" rx="1"/><path class="d-line" d="M-8 11h16M-8 14h10"/></g>';
+    if (m === 'WLC') return '<g class="d-shadow"><rect class="d-body" x="-26" y="-12" width="52" height="24" rx="5"/><circle class="led" cx="-18" cy="0" r="2.2"/>' + wifiMark(8, -1) + '</g>';
+    if (d.iot === 'sensor') return '<g class="d-shadow"><circle class="d-body" r="19"/><path d="M-3 -12v14a5 5 0 106 0v-14a3 3 0 00-6 0z" fill="url(#sg)" class="d-line"/></g>';
+    if (d.iot === 'camera') return '<g class="d-shadow"><rect class="d-body" x="-22" y="-12" width="34" height="22" rx="4"/><path class="d-body" d="M12 -4l12 -7v22l-12 -7z"/><circle r="6" cx="-6" cy="-1" fill="url(#sg)"/></g>';
+    if (d.iot === 'controller') return '<g class="d-shadow"><rect class="d-body" x="-18" y="-20" width="36" height="40" rx="6"/><circle r="9" cy="-4" fill="url(#sg)"/><path class="d-line" d="M-9 13h18"/></g>';
+    return '<g class="d-shadow"><rect class="d-body" x="-22" y="-23" width="44" height="30" rx="5"/>' + scr(-18, -19, 36, 22) + '<path class="d-body" d="M-5 7h10l2 9h-14z"/><rect class="d-body" x="-15" y="16" width="30" height="4" rx="2"/></g>';
   }
+  if (t === 'switch' || t === 'hub') {
+    if (m === 'Home Router') return '<g class="d-shadow"><rect class="d-body" x="-26" y="-4" width="52" height="18" rx="5"/><path class="d-line" d="M-14 -4l-4 -16M14 -4l4 -16"/><circle class="led" cx="-16" cy="6" r="2"/><circle class="led" cx="-8" cy="6" r="2"/><circle class="led off" cx="0" cy="6" r="2"/></g>' + wifiMark(0, -16);
+    if (m === 'Coaxial Splitter') return '<g class="d-shadow"><rect class="d-body" x="-18" y="-14" width="36" height="28" rx="6"/><circle class="d-line" cx="-9" cy="-5" r="3.5"/><circle class="d-line" cx="9" cy="-5" r="3.5"/><circle class="d-line" cx="-9" cy="6" r="3.5"/><circle class="d-line" cx="9" cy="6" r="3.5"/></g>';
+    let p = ''; const n = Math.min(d.ifaces.length || 8, 8); for (let k = 0; k < n; k++) { const x = -25 + k * 6.9, i = d.ifaces[k]; p += `<rect class="d-line" fill="var(--work)" x="${x}" y="1" width="4.6" height="7" rx="1"/><circle class="led ${i && NS.linkUp(i) ? '' : 'off'}" cx="${x + 2.3}" cy="-6" r="1.7"/>`; }
+    const l3 = d.l3 ? '<path d="M-24 -11h48" stroke="var(--accent-2)" stroke-width="2"/>' : '';
+    return '<g class="d-shadow"><rect class="d-body" x="-30" y="-14" width="60" height="28" rx="' + (t === 'hub' ? 3 : 6) + '"/>' + p + l3 + '</g>';
+  }
+  if (t === 'ap') return '<g class="d-shadow"><ellipse class="d-body" cx="0" cy="10" rx="22" ry="9"/><circle class="led" cx="-12" cy="10" r="2"/>' + (m === 'Repeater' ? '<path class="d-line" d="M0 1v-10" stroke-width="3"/>' : '') + '</g>' + wifiMark(0, -10);
+  if (t === 'firewall') return '<g class="d-shadow"><rect class="d-body" x="-26" y="-18" width="52" height="36" rx="5"/><path class="d-line" d="M-26 -6h52M-26 6h52M-12 -18v12M10 -6v12M-4 6v12"/><path d="M0 -26l-6 3v5c0 4 3 6 6 7 3-1 6-3 6-7v-5z" fill="var(--bad)" stroke="var(--ink)" stroke-width="1" transform="translate(0 8) scale(.001)"/></g>';
+  if (t === 'cloud') return '<g class="d-shadow"><path class="d-body" d="M-18 12a10 10 0 010-20 13 13 0 0125-4 12 12 0 0114 12 8 8 0 01-2 12z"/><path d="M-8 4h22M-3 -2h12" stroke="var(--accent)" stroke-width="2" stroke-linecap="round"/></g>';
+  if (t === 'modem') return '<g class="d-shadow"><rect class="d-body" x="-24" y="-6" width="48" height="18" rx="4"/><circle class="led" cx="-14" cy="3" r="2"/><circle class="led" cx="-6" cy="3" r="2"/><path class="d-line" d="M10 3h8"/></g>';
   return '<g class="d-shadow"><circle class="d-body" r="25"/><circle r="18" fill="url(#hg2)"/><path d="M-9 -3h18M5 -8l5 5-5 5M9 5h-18M-5 0l-5 5 5 5" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></g>';
 }
-function iconSvg(model) { const t = NS.MODELS[model] ? NS.MODELS[model].type : model; return `<svg viewBox="-34 -30 68 56" aria-hidden="true">${glyph({ type: t, model, ifaces: [] })}</svg>`; }
-function devSub(d) { const i = d.type === 'pc' ? d.ifaces[0] : d.ifaces.find(x => x.ip); return i && i.ip ? i.ip : ''; }
+function iconSvg(model) { const M = NS.MODELS[model]; const d = { type: M ? M.type : model, model, ifaces: [], iot: M && M.iot, l3: M && M.l3 }; return `<svg viewBox="-34 -34 68 60" aria-hidden="true">${glyph(d)}</svg>`; }
+function devSub(d) { const i = NS.ipIfs(d).find(x => x.ip); return i ? i.ip : ''; }
 
 function render() {
-  gLinks.innerHTML = ''; gDev.innerHTML = '';
+  NS.refresh(); gLinks.innerHTML = ''; gDev.innerHTML = '';
   NS.state.devices.forEach(d => d.ifaces.forEach(i => {
-    if (!i.link) return; const p = NS.peerIf(i); if (!p || d.id > p.dev.id) return;
+    if (!i.link) return; const p = NS.peerIf(i); if (!p || (d.id > p.dev.id && i.link.cable !== 'wireless')) return;
     const up = NS.linkUp(i), x1 = d.x, y1 = d.y, x2 = p.dev.x, y2 = p.dev.y, dx = x2 - x1, dy = y2 - y1, L = Math.hypot(dx, dy) || 1;
     const at = (dist, off) => [x1 + dx / L * dist - dy / L * off, y1 + dy / L * dist + dx / L * off];
     const k = Math.min(1, L / 190), dd = 38 * k, ld = 84 * k;
     const e1 = at(dd, 0), e2 = at(L - dd, 0), l1 = at(ld, -10), l2 = at(L - ld, -10);
     const g = document.createElementNS(SVGNS, 'g'); g.dataset.link = d.id + '|' + i.name;
     const c = i.link.cable || 'straight';
-    g.innerHTML = `<line class="cab ${c}" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/><line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="transparent" stroke-width="24"/><circle class="lend ${up ? 'up' : 'down'}" cx="${e1[0]}" cy="${e1[1]}" r="4.5"/><circle class="lend ${up ? 'up' : 'down'}" cx="${e2[0]}" cy="${e2[1]}" r="4.5"/><text class="port" x="${l1[0]}" y="${l1[1]}">${NS.short(i.name)}</text><text class="port" x="${l2[0]}" y="${l2[1]}">${NS.short(p.iface.name)}</text>`;
+    g.innerHTML = `<line class="cab ${c}${c === 'wireless' ? ' wl' : ''}" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/><line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="transparent" stroke-width="24"/><circle class="lend ${up ? 'up' : 'down'}" cx="${e1[0]}" cy="${e1[1]}" r="4.5"/><circle class="lend ${up ? 'up' : 'down'}" cx="${e2[0]}" cy="${e2[1]}" r="4.5"/>${c === 'wireless' ? `<g transform="translate(${(x1 + x2) / 2} ${(y1 + y2) / 2})" fill="none" stroke="var(--accent)" stroke-width="1.8" stroke-linecap="round"><circle r="9" fill="var(--work)" stroke="none"/><path d="M-5 -1a7 7 0 0110 0M-3 2a3.6 3.6 0 016 0"/></g>` : `<text class="port" x="${l1[0]}" y="${l1[1]}">${NS.short(i.name)}</text><text class="port" x="${l2[0]}" y="${l2[1]}">${NS.short(p.iface.name)}</text>`}`;
     gLinks.appendChild(g);
   }));
   NS.state.devices.forEach(d => {
@@ -759,14 +1201,16 @@ svg.addEventListener('pointercancel', e => { endPtr(e); drag = null; });
 svg.addEventListener('wheel', e => { e.preventDefault(); const r = svg.getBoundingClientRect(), mx = e.clientX - r.left, my = e.clientY - r.top, k = Math.max(.3, Math.min(2.6, view.k * (e.deltaY < 0 ? 1.12 : .89))); const wx = (mx - view.x) / view.k, wy = (my - view.y) / view.k; view.k = k; view.x = mx - wx * k; view.y = my - wy * k; applyView(); }, { passive: false });
 
 function placeAt(w) {
-  const m = NS.MODELS[placing.model], d = NS.addDevice(m.type, Math.round(w[0]), Math.round(w[1]), placing.model);
+  const d = NS.addDevice(placing.model, Math.round(w[0]), Math.round(w[1]));
   toast(d.name + ' تمت إضافته. اضغط عليه لفتح نافذته', 'good'); setTool('select');
 }
 
 function choosePort(dev, cb, title) {
   $('#portTitle').textContent = title || ('اختر بورت على ' + dev.name);
   const box = $('#portOpts'); box.innerHTML = '';
+  const ks = NS.CABLE_KINDS[cableType];
   dev.ifaces.forEach(i => {
+    if (ks && !ks.includes(i.kind)) return;
     const b = document.createElement('button'); b.type = 'button'; b.className = 'btn opt'; b.disabled = !!i.link;
     b.innerHTML = '<span>' + esc(i.name) + '</span><span>' + (i.link ? 'مستخدم' : 'فاضي') + '</span>';
     b.onclick = () => { $('#dlgPort').close(); cb(i.name); }; box.appendChild(b);
@@ -795,21 +1239,27 @@ function tapDevice(d) {
     return choosePort(d, name => doConnect(a, pa, d, name));
   }
   if (tool === 'pdu') {
-    if (!pduSrc) { if (!d.ifaces.some(i => i.ip) || d.type === 'switch') { return toast(d.type === 'switch' ? 'السويتش لا يرسل حزم IP. اختر PC أو راوتر' : d.name + ' لا يملك IP. اضبطه أولاً', 'bad'); } pduSrc = d.id; return render(); }
+    if (!pduSrc) { if (!NS.canOriginate(d) || !NS.ipIfs(d).some(i => i.ip)) { return toast(!NS.canOriginate(d) ? d.name + ' جهاز طبقة 1/2 لا يرسل حزم IP' : d.name + ' لا يملك IP. اضبطه أولاً', 'bad'); } pduSrc = d.id; return render(); }
     const s = NS.dev(pduSrc); pduSrc = null; render();
     if (s === d) return;
     return createPdu(s, d);
   }
 }
-/* ===== UI 2: device window (Physical / Config / CLI / Desktop) ===== */
+/* ===== UI 2: device window (Physical / Config / Services / CLI / Desktop) ===== */
 const logs = {}, hist = {}; let winDev = null, curTab = 'cfg';
-const KIND_AR = { Router: 'Router', Switch: 'Switch', PC: 'PC', Laptop: 'Laptop', Server: 'Server' };
+const modelLabel = d => (NS.MODELS[d.model] ? NS.MODELS[d.model].label : d.type);
+const isBrowser = d => ['PC', 'Laptop', 'Tablet', 'Smartphone', 'Server'].includes(d.model);
 
-function tabsFor(d) { return d.type === 'pc' ? [['phys', 'Physical'], ['cfg', 'Config'], ['desk', 'Desktop']] : [['phys', 'Physical'], ['cfg', 'Config'], ['cli', 'CLI']]; }
+function tabsFor(d) {
+  const t = [['phys', 'Physical'], ['cfg', 'Config']];
+  if (d.svc) t.push(['svc', 'Services']);
+  if (d.type === 'pc') t.push(['desk', 'Desktop']); else if (NS.hasCli(d)) t.push(['cli', 'CLI']);
+  return t;
+}
 function openWin(id, tab) {
   const d = NS.dev(id); if (!d) return; winDev = id;
   $('#win').hidden = false; document.body.style.overflow = 'hidden';
-  const t = tab || (d.type === 'pc' ? 'cfg' : 'cfg'); buildTabs(d); fillWin(d); showTab(t);
+  buildTabs(d); fillWin(d); showTab(tab || (d.type === 'pc' ? 'desk' : 'cfg'));
 }
 function closeWin() { winDev = null; $('#win').hidden = true; render(); requestAnimationFrame(fit); }
 function buildTabs(d) {
@@ -817,115 +1267,236 @@ function buildTabs(d) {
   tabsFor(d).forEach(([k, l]) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'wtab'; b.setAttribute('role', 'tab'); b.dataset.tab = k; b.textContent = l; b.onclick = () => showTab(k); w.appendChild(b); });
 }
 function fillWin(d) {
-  $('#wTitle').innerHTML = esc(d.name) + '<small>' + KIND_AR[d.model || d.type] + '</small>';
-  renderPhys(d); renderCfg(d); renderCli(d); if (d.type === 'pc') { renderDesk(d); renderIpc(d); }
+  $('#wTitle').innerHTML = esc(d.name) + '<small>' + esc(modelLabel(d)) + '</small>';
+  renderPhys(d); renderCfg(d); if (d.svc) renderSvc(d); if (NS.hasCli(d)) renderCli(d); if (d.type === 'pc') { renderDesk(d); renderIpc(d); }
 }
+const PANES = { phys: 'pPhys', cfg: 'pCfg', cli: 'pCli', desk: 'pDesk', ipc: 'pIpc', svc: 'pSvc', web: 'pWeb', iot: 'pWeb' };
 function showTab(t) {
   const d = NS.dev(winDev); if (!d) return;
-  const ok = tabsFor(d).map(x => x[0]).concat(d.type === 'pc' ? ['cli', 'ipc'] : []); if (!ok.includes(t)) t = 'cfg';
-  curTab = t; const hl = (t === 'cli' || t === 'ipc') && d.type === 'pc' ? 'desk' : t;
+  const ok = tabsFor(d).map(x => x[0]).concat(d.type === 'pc' ? ['cli', 'ipc', 'web', 'iot'] : []); if (!ok.includes(t)) t = 'cfg';
+  curTab = t; const sub = d.type === 'pc' && ['cli', 'ipc', 'web', 'iot'].includes(t), hl = sub ? 'desk' : t;
   document.querySelectorAll('.wtab').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === hl));
-  [['phys', 'pPhys'], ['cfg', 'pCfg'], ['cli', 'pCli'], ['desk', 'pDesk'], ['ipc', 'pIpc']].forEach(([k, id]) => { $('#' + id).hidden = k !== t; });
-  $('#cliBar').hidden = d.type !== 'pc';
+  const show = PANES[t]; ['pPhys', 'pCfg', 'pCli', 'pDesk', 'pIpc', 'pSvc', 'pWeb'].forEach(id => { $('#' + id).hidden = id !== show; });
+  $('#cliBar').hidden = !sub;
+  if (t === 'web') renderWeb(d); if (t === 'iot') renderIot(d);
   if (t === 'cli') { const o = $('#out'); o.scrollTop = o.scrollHeight; setTimeout(() => { try { $('#cmdIn').focus({ preventScroll: true }); } catch (e) { } }, 50); }
 }
 function refreshPanelIfOpen() { const d = NS.dev(winDev); if (!d || $('#win').hidden) return; renderPhys(d); if (!inputFocused()) { renderCfg(d); if (d.type === 'pc') renderIpc(d); } }
-function inputFocused() { const a = document.activeElement; return a && a.matches && a.matches('#win input[type=text]') && a.id !== 'cmdIn'; }
+function inputFocused() { const a = document.activeElement; return a && a.matches && a.matches('#win input[type=text], #win textarea, #win select') && a.id !== 'cmdIn'; }
+const afterEdit = d => { render(); $('#wTitle').innerHTML = esc(d.name) + '<small>' + esc(modelLabel(d)) + '</small>'; renderCfg(d); if (d.svc) renderSvc(d); if (d.type === 'pc') renderIpc(d); };
 
 /* ---------- Physical ---------- */
 function renderPhys(d) {
-  let h = `<div class="pwr"><button class="pwrbtn" type="button" id="pwrBtn" aria-pressed="${!d.off}" aria-label="Power"><svg viewBox="0 0 24 24"><path d="M12 3v8M6.3 6.8a8 8 0 1011.4 0"/></svg></button><div><b>Power ${d.off ? 'OFF' : 'ON'}</b><p class="msg">اضغط الزرار لتشغيل أو إطفاء الجهاز. الجهاز المطفأ لا يمرر أي حزم.</p></div></div>`;
+  const M = NS.MODELS[d.model] || {};
+  let h = `<div class="pwr"><button class="pwrbtn" type="button" id="pwrBtn" aria-pressed="${!d.off}" aria-label="Power"><svg viewBox="0 0 24 24"><path d="M12 3v8M6.3 6.8a8 8 0 1011.4 0"/></svg></button><div><b>Power ${d.off ? 'OFF' : 'ON'}</b><p class="msg">${esc(M.desc || '')}<br>اضغط الزرار لتشغيل أو إطفاء الجهاز. الموديولات بتتركّب والجهاز مطفأ فقط.</p></div></div>`;
+  if ((M.slots || []).length) {
+    h += '<h4 class="msg" style="margin:10px 0 6px"><b>Modules</b> (' + (d.off ? 'مسموح التركيب' : 'اطفئ الجهاز أولاً') + ')</h4>';
+    M.slots.forEach((kind, k) => {
+      const opts = Object.keys(NS.MODULES).filter(n => NS.MODULES[n].slot === kind);
+      h += `<div class="mod"><span>${NS.SLOT_AR[kind]} ${k + 1}</span><select class="fs" data-slot="${k}" ${d.off ? '' : 'disabled'}><option value="">— فاضي —</option>${opts.map(n => `<option value="${esc(n)}" ${d.slots[k] === n ? 'selected' : ''}>${esc(NS.MODULES[n].label)}</option>`).join('')}</select></div>`;
+    });
+  }
+  const L = d.loc || { b: 0, c: 0 };
+  h += `<div class="mod"><span>Location</span><span style="display:flex;gap:6px"><select class="fs" data-loc="b">${[0, 1, 2].map(x => `<option value="${x}" ${L.b === x ? 'selected' : ''}>Building ${x + 1}</option>`).join('')}</select><select class="fs" data-loc="c">${[0, 1].map(x => `<option value="${x}" ${L.c === x ? 'selected' : ''}>Closet ${x + 1}</option>`).join('')}</select></span></div>`;
   h += '<div class="chassis"><div class="ports">';
-  d.ifaces.forEach(i => { const up = NS.linkUp(i), p = NS.peerIf(i); h += `<div class="ptile"><span class="l"><span class="dot ${up ? 'up' : ''}"></span>${esc(NS.short(i.name))}</span><i></i><span style="color:var(--muted)">${p ? esc(p.dev.name) : '—'}</span></div>`; });
+  d.ifaces.forEach(i => { const up = NS.linkUp(i), p = NS.peerIf(i); h += `<div class="ptile"><span class="l"><span class="dot ${up ? 'up' : ''}"></span>${esc(NS.short(i.name))}</span><i></i><span style="color:var(--muted)">${p ? esc(p.dev.name) : (i.kind === 'radio' ? (i.clients || []).length + ' clients' : '—')}</span></div>`; });
   h += '</div></div><p class="msg" style="margin-top:10px">النقطة الخضراء = الرابط شغال، الحمراء = واقف (كابل غلط أو بورت مقفول أو طرف مطفأ).</p>';
   $('#pPhys').innerHTML = h;
   $('#pwrBtn').onclick = () => { d.off = !d.off; render(); fillWin(d); toast(d.name + (d.off ? ' اتطفى' : ' اشتغل'), d.off ? '' : 'good'); };
+  $('#pPhys').querySelectorAll('[data-slot]').forEach(s => s.onchange = () => { const e = NS.setModule(d, +s.dataset.slot, s.value); if (e) toast(e, 'bad'); else toast(s.value ? 'تم تركيب الموديول' : 'تم نزع الموديول', 'good'); render(); fillWin(d); });
+  $('#pPhys').querySelectorAll('[data-loc]').forEach(s => s.onchange = () => { d.loc = Object.assign({ b: 0, c: 0 }, d.loc); d.loc[s.dataset.loc] = +s.value; save(); });
+}
+
+/* ---------- generic field binding ---------- */
+function defMask(ip) { const a = parseInt(ip, 10); return a < 128 ? '255.0.0.0' : a < 192 ? '255.255.0.0' : '255.255.255.0'; }
+function getPath(o, p) { return p.split('.').reduce((x, k) => (x == null ? x : x[k]), o); }
+function setPath(o, p, v) { const ks = p.split('.'), last = ks.pop(); const t = ks.reduce((x, k) => x[k], o); t[last] = v; }
+function checkVal(kind, v) {
+  if (kind === 'ip') return v === '' || NS.ip2n(v) !== null ? null : 'IP غير صالح';
+  if (kind === 'mask') return v === '' || NS.maskLen(v) !== null ? null : 'Subnet Mask غير صالح';
+  if (kind === 'int') return /^\d+$/.test(v) ? null : 'رقم غير صالح';
+  if (kind === 'psk') return v === '' || v.length >= 8 ? null : 'الباسورد لازم 8 حروف على الأقل (أو فاضي = شبكة مفتوحة)';
+  return null;
+}
+function setIface(d, i, f, v) {
+  v = typeof v === 'boolean' ? v : String(v).trim();
+  if (f === 'on') { i.shut = !v; return null; }
+  if (f === 'vlan') { const n = parseInt(v, 10); if (!(n >= 1 && n <= 4094)) return 'VLAN لازم يكون من 1 إلى 4094'; i.vlan = n; return null; }
+  if (f === 'ip') { if (v === '') { i.ip = ''; i.mask = ''; return null; } if (NS.ip2n(v) === null) return 'IP غير صالح'; i.ip = v; i.dhcp = false; if (!i.mask || NS.maskLen(i.mask) === null) i.mask = defMask(v); return null; }
+  if (f === 'mask') { if (v === '') { i.mask = ''; return null; } if (NS.maskLen(v) === null) return 'Subnet Mask غير صالح'; i.mask = v; return null; }
+  if (f === 'clock') { const n = parseInt(v, 10); i.clock = n > 0 ? n : 0; return null; }
+  if (f === 'nameif') { i.nameif = v; return null; }
+  if (f === 'level') { const n = parseInt(v, 10); if (!(n >= 0 && n <= 100)) return 'security-level من 0 إلى 100'; i.level = n; return null; }
+  if (f === 'ssid') { i.wifi.ssid = v; return null; }
+  if (f === 'psk') { const e = checkVal('psk', v); if (e) return e; i.wifi.psk = v; return null; }
+  return null;
 }
 
 /* ---------- Config (GUI) ---------- */
-function defMask(ip) { const a = parseInt(ip, 10); return a < 128 ? '255.0.0.0' : a < 192 ? '255.255.0.0' : '255.255.255.0'; }
-function setIface(d, i, f, v) {
-  v = String(v).trim();
-  if (f === 'on') { i.shut = !v; return null; }
-  if (f === 'vlan') { const n = parseInt(v, 10); if (!(n >= 1 && n <= 4094)) return 'VLAN لازم يكون من 1 إلى 4094'; i.vlan = n; return null; }
-  if (f === 'ip') { if (v === '') { i.ip = ''; i.mask = ''; return null; } if (NS.ip2n(v) === null) return 'IP غير صالح'; i.ip = v; if (!i.mask || NS.maskLen(i.mask) === null) i.mask = defMask(v); return null; }
-  if (f === 'mask') { if (v === '') { i.mask = ''; return null; } if (NS.maskLen(v) === null) return 'Subnet Mask غير صالح'; i.mask = v; return null; }
-  return null;
+const T = (label, attrs, val, ph, mode) => `<label>${label}<input type="text" ${attrs} value="${esc(val == null ? '' : val)}" ${mode ? 'inputmode="' + mode + '"' : ''} ${ph ? 'placeholder="' + esc(ph) + '"' : ''}></label>`;
+const C = (label, attrs, on) => `<label class="chk"><input type="checkbox" ${attrs} ${on ? 'checked' : ''}> ${label}</label>`;
+function routesSec(d) {
+  let h = '<details class="sec"><summary>ROUTING · Static</summary><div class="in">';
+  h += d.routes.length ? d.routes.map((r, k) => `<div class="rt"><span>${r.net}/${NS.maskLen(r.mask)} via ${r.via}</span><button class="pbtn" type="button" data-rm="${k}">حذف</button></div>`).join('') : '<p class="msg">مفيش static routes.</p>';
+  return h + '<div class="fld three">' + T('Network', 'id="rtNet"', '', '10.3.0.0', 'decimal') + T('Mask', 'id="rtMask"', '', '255.255.255.0', 'decimal') + T('Next Hop', 'id="rtVia"', '', '10.23.0.3', 'decimal') + '</div><button class="btn primary" type="button" id="rtAdd" style="justify-content:center">Add</button></div></details>';
+}
+function dhcpSec(d) {
+  let h = '<details class="sec"><summary>DHCP · Pools</summary><div class="in">';
+  h += d.dhcpPools.length ? d.dhcpPools.map((p, k) => `<div class="rt"><span>${esc(p.name)}: ${p.net}/${p.mask ? NS.maskLen(p.mask) : '?'} gw ${p.gw || '-'} dns ${p.dns || '-'}</span><button class="pbtn" type="button" data-dprm="${k}">حذف</button></div>`).join('') : '<p class="msg">مفيش pools. الراوتر لازم يكون عنده IP على نفس شبكة الـ pool.</p>';
+  h += (d.dhcpExcl || []).map((x, k) => `<div class="rt"><span>excluded ${x.from} - ${x.to || x.from}</span><button class="pbtn" type="button" data-exrm="${k}">حذف</button></div>`).join('');
+  h += '<div class="fld">' + T('Pool name', 'id="dpName"', '', 'LAN1') + T('Network', 'id="dpNet"', '', '192.168.1.0', 'decimal') + T('Mask', 'id="dpMask"', '', '255.255.255.0', 'decimal') + T('Default gateway', 'id="dpGw"', '', '192.168.1.1', 'decimal') + T('DNS (اختياري)', 'id="dpDns"', '', '', 'decimal') + '</div><button class="btn primary" type="button" id="dpAdd" style="justify-content:center">Add pool</button>';
+  h += '<div class="fld">' + T('Exclude from', 'id="exFrom"', '', '192.168.1.1', 'decimal') + T('Exclude to', 'id="exTo"', '', '192.168.1.10', 'decimal') + '</div><button class="btn" type="button" id="exAdd" style="justify-content:center">Add excluded range</button></div></details>';
+  return h;
 }
 function renderCfg(d) {
   const pane = $('#pCfg'), opened = [...pane.querySelectorAll('details')].map(x => x.open);
-  let h = `<details class="sec" open><summary>GLOBAL · Settings</summary><div class="in"><div class="fld"><label>Display Name<input type="text" data-g="name" value="${esc(d.name)}"></label>`;
-  if (d.type !== 'pc') h += `<label>Hostname<input type="text" data-g="host" value="${esc(d.host || d.name)}"></label>`;
-  else h += `<label>Default Gateway<input type="text" data-g="gw" value="${esc(d.gw)}" inputmode="decimal" placeholder="0.0.0.0"></label>`;
-  h += '</div></div></details>';
-  if (d.type === 'router') {
-    h += '<details class="sec"><summary>ROUTING · Static</summary><div class="in">';
-    h += d.routes.length ? d.routes.map((r, k) => `<div class="rt"><span>${r.net}/${NS.maskLen(r.mask)} via ${r.via}</span><button class="pbtn" type="button" data-rm="${k}">حذف</button></div>`).join('') : '<p class="msg">مفيش static routes.</p>';
-    h += '<div class="fld three"><label>Network<input type="text" id="rtNet" inputmode="decimal" placeholder="10.3.0.0"></label><label>Mask<input type="text" id="rtMask" inputmode="decimal" placeholder="255.255.255.0"></label><label>Next Hop<input type="text" id="rtVia" inputmode="decimal" placeholder="10.23.0.3"></label></div><button class="btn primary" type="button" id="rtAdd" style="justify-content:center">Add</button></div></details>';
-  }
-  d.ifaces.forEach(i => {
-    const up = NS.linkUp(i), p = NS.peerIf(i);
-    h += `<details class="sec"><summary><span class="dot ${up ? 'up' : ''}"></span>INTERFACE · ${esc(i.name)}</summary><div class="in"><label class="chk"><input type="checkbox" data-if="${esc(i.name)}" data-f="on" ${i.shut ? '' : 'checked'}> Port Status: On</label>`;
-    if (d.type === 'switch') h += `<div class="fld one"><label>Access VLAN<input type="text" data-if="${esc(i.name)}" data-f="vlan" value="${i.vlan}" inputmode="numeric"></label></div>`;
-    else h += `<div class="fld"><label>IP Address<input type="text" data-if="${esc(i.name)}" data-f="ip" value="${esc(i.ip)}" inputmode="decimal" placeholder="غير محدد"></label><label>Subnet Mask<input type="text" data-if="${esc(i.name)}" data-f="mask" value="${esc(i.mask)}" inputmode="decimal" placeholder="255.255.255.0"></label></div>`;
-    h += `<p class="msg" dir="ltr" style="text-align:left">MAC: ${i.mac} · ${p ? 'Connected to ' + esc(p.dev.name) + ' (' + esc(NS.short(p.iface.name)) + ') · ' + CAB_AR[i.link.cable || 'straight'] : 'Not connected'}</p></div></details>`;
+  let h = `<details class="sec" open><summary>GLOBAL · Settings</summary><div class="in"><div class="fld">${T('Display Name', 'data-p="name"', d.name)}`;
+  if (d.type === 'router' || d.type === 'switch' || d.type === 'firewall') h += T('Hostname', 'data-p="host"', d.host || d.name);
+  if (NS.isHost(d)) h += T('Default Gateway', 'data-p="gw" data-v="ip"', d.gw, '0.0.0.0', 'decimal');
+  if (d.type === 'pc') h += T('DNS Server', 'data-p="dns" data-v="ip"', d.dns, '0.0.0.0', 'decimal');
+  h += '</div>';
+  if (d.l3 && d.type === 'switch') h += C('IP Routing (تفعيل التوجيه)', 'data-p="routing"', d.routing);
+  if (d.type === 'router' || d.type === 'firewall') h += `<label class="lab">NAT outside interface<select class="fs" data-p="nat"><option value="">— بدون NAT —</option>${NS.dataIfaces(d).map(i => `<option ${d.nat === i.name ? 'selected' : ''}>${esc(i.name)}</option>`).join('')}</select></label>`;
+  if (d.type === 'firewall') h += C('السماح بـ ICMP عبر الجدار (permit any)', 'data-p="allowIcmp"', d.allowIcmp);
+  h += '</div></details>';
+  if (d.model === 'Access Point' || d.model === 'Home Router') h += `<details class="sec"><summary>WIRELESS · SSID</summary><div class="in"><div class="fld">${T('SSID', 'data-p="wifi.ssid"', d.wifi.ssid)}${T('Password (WPA2)', 'data-p="wifi.psk" data-v="psk"', d.wifi.psk, 'فاضي = مفتوحة')}</div>${d.model === 'Access Point' ? T('WLC IP (اختياري)', 'data-p="wlcIp" data-v="ip"', d.wlcIp, '192.168.1.5', 'decimal') + '<p class="msg">لو ضبطت IP الـ WLC والـ AP يوصله، هياخد SSID والباسورد من الـ WLC.' + (d.joinedWlan ? ' <b>(متصل بالـ WLC: ' + esc(d.joinedWlan.ssid) + ')</b>' : '') + '</p>' : ''}<p class="msg">المدى: ${NS.RANGE} وحدة على الرسم. حرّك الأجهزة بعيد/قريب لتجربة الإشارة.</p></div></details>`;
+  if (d.model === 'WLC') h += `<details class="sec"><summary>WLAN · Controller</summary><div class="in"><div class="fld">${T('SSID', 'data-p="wlan.ssid"', d.wlan.ssid)}${T('Password', 'data-p="wlan.psk" data-v="psk"', d.wlan.psk, 'فاضي = مفتوحة')}</div></div></details>`;
+  if (d.type === 'firewall') h += `<details class="sec"><summary>VPN · Site-to-Site</summary><div class="in">${C('Enable VPN', 'data-p="vpn.on"', d.vpn.on)}<div class="fld">${T('Peer IP', 'data-p="vpn.peer" data-v="ip"', d.vpn.peer, '203.0.113.2', 'decimal')}${T('Pre-shared key', 'data-p="vpn.key"', d.vpn.key)}${T('Local network', 'data-p="vpn.lnet" data-v="ip"', d.vpn.lnet, '192.168.1.0', 'decimal')}${T('Local mask', 'data-p="vpn.lmask" data-v="mask"', d.vpn.lmask)}${T('Remote network', 'data-p="vpn.rnet" data-v="ip"', d.vpn.rnet, '192.168.2.0', 'decimal')}${T('Remote mask', 'data-p="vpn.rmask" data-v="mask"', d.vpn.rmask)}</div><p class="msg">لازم الطرفين يكون عندهم نفس الـ key وكل طرف يشير للتاني كـ Peer، والـ Remote network هي شبكة الطرف التاني.</p></div></details>`;
+  if (d.type === 'router' || d.type === 'firewall' || (d.type === 'switch' && d.l3)) h += routesSec(d);
+  if (d.dhcpPools && d.model !== 'Home Router') h += dhcpSec(d);
+  if (d.model === 'Home Router') h += `<details class="sec"><summary>HOME · DHCP / LAN</summary><div class="in"><p class="msg">DHCP شغال تلقائياً على 192.168.0.0/24 (من .100). الـ NAT مفعّل على بورت Internet. وصّل بورت Internet بالـ Cloud/Modem واضبط الـ IP عليه.</p></div></details>`;
+  if (d.type === 'switch' && d.l3) h += `<details class="sec"><summary>SVI · Interface VLAN</summary><div class="in"><div class="fld">${T('VLAN ID', 'id="sviV"', '', '10', 'numeric')}<button class="btn primary" type="button" id="sviAdd" style="align-self:end;justify-content:center">Add SVI</button></div></div></details>`;
+  NS.allIfs(d).forEach(i => {
+    const up = NS.linkUp(i), p = NS.peerIf(i), k = i.kind, n = esc(i.name);
+    h += `<details class="sec"><summary><span class="dot ${up ? 'up' : ''}"></span>INTERFACE · ${n}</summary><div class="in">`;
+    if (k !== 'console') h += C('Port Status: On', `data-if="${n}" data-f="on"`, !i.shut);
+    if (k === 'wifi') h += `<div class="fld">${T('SSID', `data-if="${n}" data-f="ssid"`, i.wifi.ssid)}${T('Password', `data-if="${n}" data-f="psk"`, i.wifi.psk, 'فاضي = مفتوحة')}</div>`;
+    if (d.type === 'switch' && k !== 'svi' && k !== 'radio') h += `<div class="fld one">${T('Access VLAN', `data-if="${n}" data-f="vlan"`, i.vlan, '', 'numeric')}</div>`;
+    if (k === 'serial') h += `<div class="fld one">${T('Clock rate (طرف DCE)', `data-if="${n}" data-f="clock"`, i.clock || '', '64000', 'numeric')}</div>`;
+    if (d.type === 'firewall' && k !== 'console') h += `<div class="fld">${T('nameif', `data-if="${n}" data-f="nameif"`, i.nameif)}${T('security-level', `data-if="${n}" data-f="level"`, i.level, '0-100', 'numeric')}</div>`;
+    if (k !== 'console' && k !== 'radio' && (d.type !== 'switch' || k === 'svi') && d.model !== 'Meraki MX' || (d.model === 'Meraki MX' && k !== 'console')) h += `<div class="fld">${T('IP Address', `data-if="${n}" data-f="ip"`, i.ip, 'غير محدد', 'decimal')}${T('Subnet Mask', `data-if="${n}" data-f="mask"`, i.mask, '255.255.255.0', 'decimal')}</div>`;
+    h += `<p class="msg" dir="ltr" style="text-align:left">${k === 'svi' ? 'Virtual interface' : 'MAC: ' + i.mac} · ${p ? 'Connected to ' + esc(p.dev.name) + ' (' + esc(NS.short(p.iface.name)) + ') · ' + (CAB_AR[i.link.cable] || i.link.cable) : (k === 'radio' ? (i.clients || []).length + ' wireless clients' : 'Not connected')}${!up && !i.shut && (p || k === 'wifi') ? ' · ' + esc(NS.whyDown(i)) : ''}</p></div></details>`;
   });
   pane.innerHTML = h; pane.querySelectorAll('details').forEach((x, k) => { if (opened[k] !== undefined) x.open = opened[k]; });
 }
-$('#pCfg').addEventListener('change', e => {
-  const d = NS.dev(winDev), t = e.target; if (!d) return; let err = null;
-  if (t.dataset.g) {
-    const v = t.value.trim();
-    if (t.dataset.g === 'name') { if (v) d.name = v; }
-    else if (t.dataset.g === 'host') { if (v) d.host = v; }
-    else if (t.dataset.g === 'gw') { if (v === '' || NS.ip2n(v) !== null) d.gw = v; else err = 'Gateway غير صالح'; }
+function applyField(d, t) {
+  let err = null;
+  if (t.dataset.p) {
+    const p = t.dataset.p; let v = t.type === 'checkbox' ? t.checked : t.value.trim();
+    if (typeof v === 'string') err = checkVal(t.dataset.v, v);
+    if (p === 'name' && v === '') err = 'الاسم مطلوب';
+    if (!err) { setPath(d, p, v); if (p === 'routing') render(); }
   } else if (t.dataset.if) err = setIface(d, NS.iface(d, t.dataset.if), t.dataset.f, t.type === 'checkbox' ? t.checked : t.value);
-  t.classList.toggle('inv', !!err); if (err) return toast(err, 'bad');
-  $('#wTitle').innerHTML = esc(d.name) + '<small>' + KIND_AR[d.model || d.type] + '</small>'; render(); renderCfg(d); if (d.type === 'pc') renderIpc(d);
-});
+  t.classList.toggle('inv', !!err); if (err) { toast(err, 'bad'); return false; } return true;
+}
+$('#pCfg').addEventListener('change', e => { const d = NS.dev(winDev); if (!d || !e.target.matches('input,select')) return; if (applyField(d, e.target)) afterEdit(d); });
+function openSec(i) { const s = $('#pCfg').querySelectorAll('details')[i]; if (s) s.open = true; }
 $('#pCfg').addEventListener('click', e => {
-  const d = NS.dev(winDev); if (!d) return; const t = e.target.closest('button'); if (!t) return;
-  if (t.dataset.rm !== undefined) { d.routes.splice(+t.dataset.rm, 1); render(); renderCfg(d); $('#pCfg').querySelectorAll('details')[1].open = true; }
-  if (t.id === 'rtAdd') {
-    const n = $('#rtNet').value.trim(), m = $('#rtMask').value.trim(), v = $('#rtVia').value.trim();
-    if (NS.ip2n(n) === null || NS.maskLen(m) === null || NS.ip2n(v) === null) return toast('أدخل Network و Mask و Next Hop صحيحين', 'bad');
-    d.routes.push({ net: NS.n2ip(NS.net(n, m)), mask: m, via: v }); render(); renderCfg(d); $('#pCfg').querySelectorAll('details')[1].open = true; toast('تمت إضافة الـ route', 'good');
-  }
+  const d = NS.dev(winDev); if (!d) return; const t = e.target.closest('button'); if (!t) return; const v = id => ($('#' + id).value || '').trim(), secIdx = () => [...$('#pCfg').querySelectorAll('details')].findIndex(x => x.contains(t));
+  let ix = secIdx(), msg = null;
+  if (t.dataset.rm !== undefined) d.routes.splice(+t.dataset.rm, 1);
+  else if (t.id === 'rtAdd') {
+    const n = v('rtNet'), m = v('rtMask'), via = v('rtVia');
+    if (NS.ip2n(n) === null || NS.maskLen(m) === null || NS.ip2n(via) === null) return toast('أدخل Network و Mask و Next Hop صحيحين', 'bad');
+    d.routes.push({ net: NS.n2ip(NS.net(n, m)), mask: m, via }); msg = 'تمت إضافة الـ route';
+  } else if (t.dataset.dprm !== undefined) d.dhcpPools.splice(+t.dataset.dprm, 1);
+  else if (t.dataset.exrm !== undefined) d.dhcpExcl.splice(+t.dataset.exrm, 1);
+  else if (t.id === 'dpAdd') {
+    const nm = v('dpName'), n = v('dpNet'), m = v('dpMask'), g = v('dpGw'), dn = v('dpDns');
+    if (!nm || NS.ip2n(n) === null || NS.maskLen(m) === null || (g && NS.ip2n(g) === null) || (dn && NS.ip2n(dn) === null)) return toast('اكتب اسم الـ pool وNetwork وMask صحيحين', 'bad');
+    d.dhcpPools.push({ name: nm, net: NS.n2ip(NS.net(n, m)), mask: m, gw: g, dns: dn }); msg = 'تمت إضافة الـ pool';
+  } else if (t.id === 'exAdd') {
+    const a = v('exFrom'), b = v('exTo') || a; if (NS.ip2n(a) === null || NS.ip2n(b) === null) return toast('IP غير صالح', 'bad'); d.dhcpExcl.push({ from: a, to: b });
+  } else if (t.id === 'sviAdd') {
+    const n = parseInt(v('sviV'), 10); if (!(n >= 1 && n <= 4094)) return toast('VLAN من 1 إلى 4094', 'bad'); NS.mkSvi(d, n); msg = 'تم إنشاء interface Vlan' + n;
+  } else return;
+  render(); renderCfg(d); openSec(ix); if (msg) toast(msg, 'good');
 });
 
-/* ---------- Desktop (PC) ---------- */
+/* ---------- Services (Server) ---------- */
+function renderSvc(d) {
+  const s = d.svc, pane = $('#pSvc'), opened = [...pane.querySelectorAll('details')].map(x => x.open);
+  const sec = (t, body) => `<details class="sec"><summary>${t}</summary><div class="in">${body}</div></details>`;
+  let h = sec('HTTP / HTTPS', C('HTTP', 'data-p="svc.http.on"', s.http.on) + C('HTTPS', 'data-p="svc.https.on"', s.https.on) + `<label class="lab">index.html<textarea data-p="svc.http.page" rows="4" style="direction:ltr;font:12px var(--mono);background:var(--surface);color:var(--ink);border:1px solid var(--chrome-line);border-radius:5px;padding:8px">${esc(s.http.page)}</textarea></label>`);
+  h += sec('DNS', C('DNS Service', 'data-p="svc.dns.on"', s.dns.on) + (s.dns.records.length ? s.dns.records.map((r, k) => `<div class="rt"><span>${esc(r.name)} → ${r.ip}</span><button class="pbtn" type="button" data-dnsrm="${k}">حذف</button></div>`).join('') : '<p class="msg">مفيش سجلات (A records).</p>') + '<div class="fld">' + T('Name', 'id="dnsN"', '', 'www.test.com') + T('Address', 'id="dnsI"', '', '192.168.1.10', 'decimal') + '</div><button class="btn primary" type="button" id="dnsAdd" style="justify-content:center">Add</button>');
+  const p = s.dhcp.pool;
+  h += sec('DHCP', C('DHCP Service', 'data-p="svc.dhcp.on"', s.dhcp.on) + '<div class="fld">' + T('Default gateway', 'data-p="svc.dhcp.pool.gw" data-v="ip"', p.gw, '', 'decimal') + T('DNS server', 'data-p="svc.dhcp.pool.dns" data-v="ip"', p.dns, '', 'decimal') + T('Start IP', 'data-p="svc.dhcp.pool.start" data-v="ip"', p.start, '192.168.1.100', 'decimal') + T('Subnet mask', 'data-p="svc.dhcp.pool.mask" data-v="mask"', p.mask, '', 'decimal') + T('Max users', 'data-p="svc.dhcp.pool.max" data-v="int"', p.max, '', 'numeric') + '</div><p class="msg">لازم Static IP على السيرفر نفسه. الـ DHCP شغال داخل نفس الشبكة/VLAN.</p>');
+  h += sec('FTP / TFTP', C('FTP', 'data-p="svc.ftp.on"', s.ftp.on) + `<p class="msg">User: ${s.ftp.users.map(u => esc(u.u) + '/' + esc(u.p)).join(', ')}</p>` + C('TFTP', 'data-p="svc.tftp.on"', s.tftp.on) + '<p class="msg">الخدمة بتتفعّل وتتحفظ (إعداد فقط، مفيش نقل ملفات فعلي في النسخة دي).</p>');
+  h += sec('EMAIL', C('Email (SMTP/POP3)', 'data-p="svc.email.on"', s.email.on) + T('Domain', 'data-p="svc.email.domain"', s.email.domain, 'test.com') + '<p class="msg">إعداد فقط (بدون إرسال فعلي).</p>');
+  h += sec('SYSLOG / AAA', C('Syslog', 'data-p="svc.syslog.on"', s.syslog.on) + C('AAA (RADIUS)', 'data-p="svc.aaa.on"', s.aaa.on) + '<p class="msg">إعداد فقط (بدون تسجيل أو مصادقة فعلية).</p>');
+  pane.innerHTML = h; pane.querySelectorAll('details').forEach((x, k) => { if (opened[k] !== undefined) x.open = opened[k]; });
+}
+$('#pSvc').addEventListener('change', e => { const d = NS.dev(winDev); if (!d || !e.target.matches('input,textarea')) return; if (applyField(d, e.target)) { if (e.target.dataset.p === 'svc.dhcp.pool.max') d.svc.dhcp.pool.max = +d.svc.dhcp.pool.max; render(); } });
+$('#pSvc').addEventListener('click', e => {
+  const d = NS.dev(winDev), t = e.target.closest('button'); if (!d || !t) return;
+  if (t.dataset.dnsrm !== undefined) d.svc.dns.records.splice(+t.dataset.dnsrm, 1);
+  else if (t.id === 'dnsAdd') { const n = $('#dnsN').value.trim(), i = $('#dnsI').value.trim(); if (!n || NS.ip2n(i) === null) return toast('اكتب اسم وعنوان IP صحيح', 'bad'); d.svc.dns.records.push({ name: n, ip: i }); toast('تمت إضافة السجل', 'good'); }
+  else return; renderSvc(d); [...$('#pSvc').querySelectorAll('details')][1].open = true;
+});
+
+/* ---------- Desktop (hosts) ---------- */
 function renderDesk(d) {
-  $('#pDesk').innerHTML = `<div class="desk"><button class="app" type="button" data-app="ipc"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4M7 9h4M7 12h7"/></svg>IP Configuration</button><button class="app" type="button" data-app="cli"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 10l3 2-3 2M12 15h5"/></svg>Command Prompt</button></div>`;
-  $('#pDesk').querySelectorAll('[data-app]').forEach(b => b.onclick = () => showTab(b.dataset.app));
+  const ic = { ipc: '<rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4M7 9h4M7 12h7"/>', cli: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 10l3 2-3 2M12 15h5"/>', web: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/>', term: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9l3 3-3 3M13 15h4"/>', iot: '<rect x="5" y="3" width="14" height="18" rx="3"/><circle cx="12" cy="10" r="3"/><path d="M9 17h6"/>' };
+  const apps = [['ipc', 'IP Configuration']]; if (NS.hasCli(d)) apps.push(['cli', 'Command Prompt']); if (isBrowser(d)) apps.push(['web', 'Web Browser']); if (d.iot) apps.push(['iot', 'IoT Control']); if (d.ifaces.some(i => i.kind === 'console')) apps.push(['term', 'Terminal (Console)']);
+  $('#pDesk').innerHTML = '<div class="desk">' + apps.map(a => `<button class="app" type="button" data-app="${a[0]}"><svg viewBox="0 0 24 24">${ic[a[0]]}</svg>${a[1]}</button>`).join('') + '</div>';
+  $('#pDesk').querySelectorAll('[data-app]').forEach(b => b.onclick = () => { if (b.dataset.app !== 'term') return showTab(b.dataset.app); const t = NS.consoleTarget(d); if (!t) return toast('وصّل كابل Console من بورت RS232 لبورت Console في الجهاز (والجهازين شغالين)', 'bad'); if (!NS.hasCli(t)) return toast(t.name + ' ملوش CLI', 'bad'); toast('Terminal متصل بـ ' + t.name, 'good'); openWin(t.id, 'cli'); });
 }
 function renderIpc(d) {
-  const i = d.ifaces[0], up = NS.linkUp(i);
-  $('#pIpc').innerHTML = `<div class="subbar" style="margin:-12px -12px 12px"><button class="pbtn" type="button" id="ipcBack">رجوع إلى Desktop</button><span>IP Configuration</span></div><p class="msg" style="margin-bottom:10px"><span class="dot ${up ? 'up' : ''}"></span> ${esc(i.name)} · ${up ? 'Link Up' : 'Link Down'}</p><div class="fld one"><label class="chk"><input type="radio" disabled> DHCP (غير مدعوم في النسخة دي)</label><label class="chk"><input type="radio" checked disabled> Static</label><label>IPv4 Address<input type="text" data-if="${esc(i.name)}" data-f="ip" value="${esc(i.ip)}" inputmode="decimal" placeholder="192.168.1.10"></label><label>Subnet Mask<input type="text" data-if="${esc(i.name)}" data-f="mask" value="${esc(i.mask)}" inputmode="decimal" placeholder="255.255.255.0"></label><label>Default Gateway<input type="text" data-g="gw" value="${esc(d.gw)}" inputmode="decimal" placeholder="192.168.1.1"></label></div>`;
+  const i = NS.mainIf(d); if (!i) { $('#pIpc').innerHTML = '<p class="msg">لا يوجد كارت شبكة. ركّب NIC من تبويب Physical.</p>'; return; }
+  const up = NS.linkUp(i), n = esc(i.name);
+  $('#pIpc').innerHTML = `<div class="subbar" style="margin:-12px -12px 12px"><button class="pbtn" type="button" id="ipcBack">رجوع إلى Desktop</button><span>IP Configuration</span></div><p class="msg" style="margin-bottom:10px"><span class="dot ${up ? 'up' : ''}"></span> ${n} · ${up ? 'Link Up' : 'Link Down — ' + esc(NS.whyDown(i))}</p>
+  <div class="fld one"><label class="chk"><input type="radio" name="ipm" id="ipDhcp" ${i.dhcp ? 'checked' : ''}> DHCP</label><label class="chk"><input type="radio" name="ipm" id="ipStat" ${i.dhcp ? '' : 'checked'}> Static</label>
+  ${i.kind === 'wifi' ? `<div class="fld">${T('SSID', `data-if="${n}" data-f="ssid"`, i.wifi.ssid)}${T('Password', `data-if="${n}" data-f="psk"`, i.wifi.psk, 'فاضي = مفتوحة')}</div>` : ''}
+  ${T('IPv4 Address', `data-if="${n}" data-f="ip" ${i.dhcp ? 'readonly' : ''}`, i.ip, '192.168.1.10', 'decimal')}${T('Subnet Mask', `data-if="${n}" data-f="mask" ${i.dhcp ? 'readonly' : ''}`, i.mask, '255.255.255.0', 'decimal')}${T('Default Gateway', 'data-p="gw" data-v="ip"', d.gw, '192.168.1.1', 'decimal')}${T('DNS Server', 'data-p="dns" data-v="ip"', d.dns, '', 'decimal')}</div><p class="msg" id="dhcpMsg" style="margin-top:8px"></p>`;
   $('#ipcBack').onclick = () => showTab('desk');
+  $('#ipStat').onchange = () => { i.dhcp = false; renderIpc(d); };
+  $('#ipDhcp').onchange = () => { i.dhcp = true; const r = NS.dhcp(d, i); if (r.ok) toast('DHCP: ' + i.ip, 'good'); else { toast(r.msg, 'bad'); } afterEdit(d); const m = $('#dhcpMsg'); if (m && !r.ok) m.textContent = 'DHCP failed: ' + r.msg; };
 }
-$('#pIpc').addEventListener('change', e => {
-  const d = NS.dev(winDev), t = e.target; if (!d) return; let err = null;
-  if (t.dataset.g === 'gw') { const v = t.value.trim(); if (v === '' || NS.ip2n(v) !== null) d.gw = v; else err = 'Gateway غير صالح'; }
-  else if (t.dataset.if) err = setIface(d, NS.iface(d, t.dataset.if), t.dataset.f, t.value);
-  t.classList.toggle('inv', !!err); if (err) return toast(err, 'bad'); render(); renderIpc(d); renderCfg(d);
-});
+$('#pIpc').addEventListener('change', e => { const d = NS.dev(winDev), t = e.target; if (!d || !t.matches('input[type=text]')) return; if (applyField(d, t)) { afterEdit(d); } });
 $('#cliBack').onclick = () => showTab('desk');
+
+/* ---------- Web Browser / IoT ---------- */
+let webLast = {};
+function renderWeb(d) {
+  const w = webLast[d.id] || { url: '', page: '', note: '' };
+  $('#pWeb').innerHTML = `<div class="subbar" style="margin:-12px -12px 12px"><button class="pbtn" type="button" id="webBack">رجوع إلى Desktop</button><span>Web Browser</span></div><form class="web" id="webForm"><div class="fld one">${T('URL', 'id="webUrl"', w.url, 'http://192.168.1.10 أو www.test.com', 'url')}</div><button class="btn primary" type="submit" style="justify-content:center">Go</button><div class="page" id="webPage">${w.err ? '<b style="color:#b00">' + esc(w.err) + '</b>' : w.page || '<span style="color:#777">اكتب عنوان السيرفر واضغط Go. لو استخدمت اسم لازم DNS يكون مضبوط على الجهاز.</span>'}</div></form>`;
+  $('#webBack').onclick = () => showTab('desk');
+  $('#webForm').onsubmit = e => {
+    e.preventDefault(); const u = $('#webUrl').value.trim(), r = NS.httpGet(d, u); webLast[d.id] = { url: u, page: r.ok ? r.page : '', err: r.err };
+    if (r.steps && typeof onPingResult === 'function') onPingResult(d, { trace: r.steps, fail: r.fail || null });
+    renderWeb(d); toast(r.ok ? 'تم تحميل الصفحة من ' + r.server : r.err, r.ok ? 'good' : 'bad');
+  };
+}
+function renderIot(d) {
+  const s = d.iotState || (d.iotState = { temp: 24, on: true }), k = d.iot;
+  $('#pWeb').innerHTML = `<div class="subbar" style="margin:-12px -12px 12px"><button class="pbtn" type="button" id="webBack">رجوع إلى Desktop</button><span>IoT Control · ${esc(k)}</span></div><div class="fld one">${C(k === 'camera' ? 'Streaming' : k === 'controller' ? 'Output ON (إضاءة/قفل)' : 'Sensor Active', 'id="iotOn"', s.on)}${k === 'sensor' ? T('Temperature °C', 'id="iotT"', s.temp, '', 'numeric') : ''}</div><p class="msg" style="margin-top:10px">الجهاز بيرد على الـ ping لما يكون متصل (سلكي FastEthernet0 أو WiFi) وله IP: ${esc(devSub(d) || 'غير محدد')}. اضبط الـ IP من IP Configuration أو DHCP.</p>`;
+  $('#webBack').onclick = () => showTab('desk');
+  $('#iotOn').onchange = e => { s.on = e.target.checked; save(); }; if ($('#iotT')) $('#iotT').onchange = e => { s.temp = +e.target.value || 0; save(); };
+}
 
 /* ---------- CLI ---------- */
 function print(id, t, c) { (logs[id] = logs[id] || []).push({ t, c }); }
+function banner(d) {
+  if (d.type === 'pc') return 'Netlab Command Prompt 1.0\nاكتب help لعرض الأوامر.';
+  if (d.type === 'firewall') return 'Type help or \'?\' for a list of available commands.\n' + d.host + '>';
+  return (d.type === 'router' ? 'Router' : 'Switch') + ' con0 is now available\n\nPress RETURN to get started!\nاكتب ? للمساعدة.';
+}
 function renderCli(d) {
-  if (!logs[d.id]) print(d.id, d.type === 'pc' ? 'Netlab PC Command Line 1.0\nاكتب help لعرض الأوامر.' : (d.model === 'Router' ? 'Router con0 is now available\n\nPress RETURN to get started!' : 'Switch con0 is now available\n\nPress RETURN to get started!') + '\nاكتب ? للمساعدة.', 't-dim');
+  if (!logs[d.id]) print(d.id, banner(d), 't-dim');
   const o = $('#out'); o.innerHTML = '';
   logs[d.id].forEach(l => { const s = document.createElement('div'); s.textContent = l.t; if (l.c) s.className = l.c; o.appendChild(s); });
   o.scrollTop = o.scrollHeight; $('#prompt').textContent = NS.prompt(d); renderChips(d);
 }
 function renderChips(d) {
-  const r = d.type === 'router', f = r ? 'gigabitethernet0/0' : 'fastethernet0/1'; let c;
-  if (d.type === 'pc') c = ['ipconfig /all', 'ping ', 'tracert ', 'arp -a', 'help'];
+  let c;
+  const f = d.type === 'router' || d.type === 'firewall' ? NS.dataIfaces(d)[0].name : d.ifaces[0].name;
+  if (d.type === 'pc') c = ['ipconfig /all', 'ipconfig /renew', 'ping ', 'tracert ', 'nslookup ', 'http ', 'arp -a', 'help'];
   else if (d.mode === 'user') c = ['enable', 'show ip interface brief', 'ping ', '?'];
-  else if (d.mode === 'priv') c = ['configure terminal', 'show ip interface brief', 'show running-config', r ? 'show ip route' : 'show mac address-table', r ? 'show arp' : 'show vlan brief', 'ping ', 'traceroute ', 'disable'];
-  else if (d.mode === 'config') c = ['interface ' + f, r ? 'ip route ' : 'hostname ', 'hostname ', 'end'];
-  else c = r ? ['ip address ', 'no shutdown', 'shutdown', 'exit', 'end'] : ['switchport access vlan ', 'no shutdown', 'shutdown', 'exit', 'end'];
+  else if (d.mode === 'priv') c = ['configure terminal', 'show ip interface brief', 'show running-config', d.type === 'switch' ? 'show mac address-table' : 'show ip route', d.type === 'switch' ? 'show vlan brief' : 'show arp', 'ping ', 'disable'];
+  else if (d.mode === 'config') c = ['interface ' + f, d.type === 'firewall' ? 'nat outside ' : 'ip route ', d.type !== 'firewall' && d.dhcpPools ? 'ip dhcp pool ' : 'hostname ', d.l3 ? 'ip routing' : 'hostname ', 'end'];
+  else if (d.mode === 'dhcp') c = ['network ', 'default-router ', 'dns-server ', 'exit'];
+  else if (d.type === 'firewall') c = ['nameif ', 'security-level ', 'ip address ', 'no shutdown', 'exit'];
+  else c = d.type === 'router' ? ['ip address ', 'no shutdown', 'clock rate 64000', 'shutdown', 'exit'] : ['switchport access vlan ', 'ip address ', 'no shutdown', 'shutdown', 'exit'];
   $('#chips').innerHTML = '';
   c.forEach(x => { const b = document.createElement('button'); b.type = 'button'; b.className = 'chip'; b.textContent = x.trim(); b.onclick = () => { const i = $('#cmdIn'); i.value = x; i.focus(); if (!/\s$/.test(x)) $('#cmdForm').requestSubmit(); }; $('#chips').appendChild(b); });
 }
@@ -936,9 +1507,9 @@ $('#cmdForm').addEventListener('submit', e => {
   if (line.trim()) { (hist[d.id] = hist[d.id] || []).push(line); hist[d.id].hp = hist[d.id].length; }
   const r = NS.exec(d, line);
   if (r.clear) logs[d.id] = [];
-  if (r.out) print(d.id, r.out, /^%[A-Z ]*Invalid|^% Inc|not recognized|الاستخدام|غير صالح/.test(r.out) ? 't-err' : '');
-  if (r.ping && r.trace) { const q = onPingResult(d, r); if (q) print(d.id, '[Simulation Mode] الحزم اتلتقطت. أغلق النافذة واضغط Capture / Forward أو Play.', 't-dim'); }
-  if (r.changed) { render(); $('#wTitle').innerHTML = esc(d.name) + '<small>' + KIND_AR[d.model || d.type] + '</small>'; renderCfg(d); if (d.type === 'pc') renderIpc(d); }
+  if (r.out) print(d.id, r.out, /^%[A-Z ]*Invalid|^% Inc|^ERROR|not recognized|الاستخدام|غير صالح|failed|Request could not/.test(r.out) ? 't-err' : '');
+  if (r.trace && typeof onPingResult === 'function') { const q = onPingResult(d, r); if (q) print(d.id, '[Simulation Mode] الحزم اتلتقطت. أغلق النافذة واضغط Capture / Forward أو Play.', 't-dim'); }
+  if (r.changed) afterEdit(d);
   renderCli(d);
 });
 $('#cmdIn').addEventListener('keydown', e => {
@@ -952,21 +1523,38 @@ addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#win').hidden &
 let mode = 'rt', cat = 'net', pdus = [], pduNum = 0, simQ = [], simRows = [], simT = 0, simBusy = false, simPlay = false, simTok = 0, simTimer = 0;
 
 /* ---------- palette ---------- */
+const cabLine = (st, extra) => `<path d="M-24 14L24 -14" stroke="${st}" stroke-width="3" stroke-linecap="round" ${extra || ''}/>`;
 const cabIcon = c => `<svg viewBox="-34 -30 68 56" aria-hidden="true">` + ({
   auto: '<path d="M6 -22L-12 4h12l-4 20L16 -6H4z" fill="var(--warn)" stroke="var(--ink)" stroke-width="1.4" stroke-linejoin="round"/>',
-  straight: '<path d="M-24 14L24 -14" stroke="var(--ink)" stroke-width="3" stroke-linecap="round"/>',
-  cross: '<path d="M-24 14L24 -14" stroke="var(--ink)" stroke-width="3" stroke-linecap="round" stroke-dasharray="7 5"/>',
-  fiber: '<path d="M-24 14L24 -14" stroke="var(--warn)" stroke-width="3" stroke-linecap="round"/>'
+  console: cabLine('var(--accent)'),
+  straight: cabLine('var(--ink)'),
+  cross: cabLine('var(--ink)', 'stroke-dasharray="7 5"'),
+  fiber: cabLine('var(--warn)'),
+  'serial-dce': cabLine('var(--bad)', '') + '<circle cx="-24" cy="14" r="4" fill="var(--bad)"/>',
+  'serial-dte': cabLine('var(--bad)', 'stroke-dasharray="9 3"'),
+  coax: cabLine('#8a5a2b'),
+  phone: cabLine('var(--ink)', 'stroke-dasharray="1.5 6"')
 })[c] + '</svg>';
-const CATS = {
-  net: { title: 'Network Devices', items: [{ model: 'Router', label: 'Router', desc: 'Router: 3 × GigabitEthernet. بورتاته بتبدأ مقفولة (shutdown).' }, { model: 'Switch', label: 'Switch', desc: 'Switch Layer 2: 8 × FastEthernet مع دعم VLAN.' }] },
-  end: { title: 'End Devices', items: [{ model: 'PC', label: 'PC', desc: 'PC: FastEthernet0 مع Desktop و Command Prompt.' }, { model: 'Laptop', label: 'Laptop', desc: 'Laptop: نفس إمكانيات الـ PC.' }, { model: 'Server', label: 'Server', desc: 'Server: نفس إمكانيات الـ PC.' }] },
-  con: { title: 'Connections', items: [{ cable: 'auto', label: 'Auto', desc: 'Automatically Choose Connection Type: يختار الكابل الصح وأول بورت فاضي.' }, { cable: 'straight', label: 'Straight', desc: 'Copper Straight-Through: بين أجهزة مختلفة النوع (PC ↔ Switch، Router ↔ Switch).' }, { cable: 'cross', label: 'Cross-Over', desc: 'Copper Cross-Over: بين أجهزة من نفس النوع (Switch ↔ Switch، PC ↔ Router).' }, { cable: 'fiber', label: 'Fiber', desc: 'Fiber: كابل ألياف ضوئية (برتقالي).' }] }
-};
+const CABS = [
+  { cable: 'auto', label: 'Auto', desc: 'Automatically Choose Connection Type: يختار نوع الكابل الصح وأول بورتين فاضيين.' },
+  { cable: 'console', label: 'Console', desc: 'Console: من RS232 في الـ PC لبورت Console في الراوتر/السويتش/ASA، وبعدها افتح Terminal من الـ PC.' },
+  { cable: 'straight', label: 'Straight', desc: 'Copper Straight-Through: بين أجهزة مختلفة النوع (PC ↔ Switch، Router ↔ Switch).' },
+  { cable: 'cross', label: 'Cross-Over', desc: 'Copper Cross-Over: بين أجهزة من نفس النوع (Switch ↔ Switch، PC ↔ Router).' },
+  { cable: 'fiber', label: 'Fiber', desc: 'Fiber: بين بورتات Fiber فقط (SFP / موديول Fiber).' },
+  { cable: 'serial-dce', label: 'Serial DCE', desc: 'Serial DCE: الطرف الأول DCE (لازم clock rate عليه)، والتاني DTE.' },
+  { cable: 'serial-dte', label: 'Serial DTE', desc: 'Serial DTE: الطرف الأول DTE والتاني DCE (clock rate على التاني).' },
+  { cable: 'coax', label: 'Coaxial', desc: 'Coaxial: بين بورتات Coaxial (Cable Modem، Splitter، Cloud).' },
+  { cable: 'phone', label: 'Phone', desc: 'Phone: خط تليفون بين بورتات Phone (DSL Modem، Cloud، NIC Modem).' }
+];
+const TOPS = { net: { title: 'Network Devices', subs: [['routers', 'Routers'], ['switches', 'Switches'], ['hubs', 'Hubs'], ['wireless', 'Wireless'], ['security', 'Security'], ['wan', 'WAN Emulation']] }, end: { title: 'End Devices', subs: [['users', 'Users'], ['servers', 'Servers'], ['voice', 'Phone / Printer'], ['iot', 'Smart Home / IoT']] }, con: { title: 'Connections', subs: [] } };
+let sub = { net: 'routers', end: 'users', con: '' };
+function catItems(c) { return c === 'con' ? CABS : Object.keys(NS.MODELS).filter(k => NS.MODELS[k].sub === sub[c]).map(k => ({ model: k, label: NS.MODELS[k].label, desc: NS.MODELS[k].desc })); }
 function refreshPalette() {
   document.querySelectorAll('.pcat').forEach(b => b.setAttribute('aria-selected', b.dataset.cat === cat));
-  const box = $('#pItems'); box.innerHTML = ''; let nm = CATS[cat].title;
-  CATS[cat].items.forEach(it => {
+  const sb = $('#pSubs'); sb.innerHTML = ''; sb.hidden = !TOPS[cat].subs.length;
+  TOPS[cat].subs.forEach(([k, l]) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'psub'; b.textContent = l; b.setAttribute('aria-selected', sub[cat] === k); b.onclick = () => { sub[cat] = k; refreshPalette(); }; sb.appendChild(b); });
+  const box = $('#pItems'); box.innerHTML = ''; let nm = TOPS[cat].title;
+  catItems(cat).forEach(it => {
     const b = document.createElement('button'); b.type = 'button'; b.className = 'pit';
     const on = it.model ? (tool === 'place' && placing && placing.model === it.model) : (tool === 'cable' && cableType === it.cable);
     b.setAttribute('aria-pressed', on); b.innerHTML = (it.model ? iconSvg(it.model) : cabIcon(it.cable)) + '<span>' + it.label + '</span>';
@@ -1019,7 +1607,7 @@ function renderPanel() {
 
 /* ---------- PDUs and pings ---------- */
 function createPdu(s, d) {
-  const di = d.ifaces.find(i => i.ip); if (!di) return toast(d.name + ' لا يملك IP', 'bad');
+  const di = NS.ipIfs(d).find(i => i.ip); if (!di) return toast(d.name + ' لا يملك IP', 'bad');
   const p = { num: ++pduNum, src: s.id, dst: d.id, ip: di.ip, status: 'none' }; pdus.push(p); firePdu(p);
 }
 function firePdu(p) {
@@ -1084,7 +1672,7 @@ function showEvent(r) {
     const last = NS.dev(ev.from); rows.push(['Last Device', last ? last.name : '?']);
     rows.push(['Type', ev.dir === 'rep' ? 'ICMP Echo Reply' : 'ICMP Echo Request']);
     rows.push(['Layer 3 · Src IP', ev.srcIp || '—']); rows.push(['Layer 3 · Dst IP', ev.dstIp || '—']); rows.push(['TTL', ev.ttl || '—']);
-    const note = !at ? '' : at.type === 'router' ? 'Layer 3: بحث في Routing Table ثم تمرير الحزمة (TTL-1)' : at.type === 'switch' ? 'Layer 2: بحث في MAC Table وتمرير داخل نفس الـ VLAN' : (ev.last ? 'الحزمة وصلت للوجهة' : 'استقبال على الـ NIC ومعالجة');
+    const note = !at ? '' : at.type === 'router' || at.type === 'firewall' || (at.type === 'switch' && at.routing) ? 'Layer 3: بحث في Routing Table ثم تمرير الحزمة (TTL-1)' + (at.type === 'firewall' ? ' + فحص security-level' : '') : at.type === 'switch' ? 'Layer 2: بحث في MAC Table وتمرير داخل نفس الـ VLAN' : at.type === 'hub' ? 'Layer 1: الـ Hub بيبث الإشارة لكل البورتات' : at.type === 'ap' ? 'Wireless: تحويل بين الـ WiFi والشبكة السلكية' : (ev.last ? 'الحزمة وصلت للوجهة' : 'استقبال على الـ NIC ومعالجة');
     rows.push(['Layer 2', note]);
   }
   $('#pduTitle').textContent = 'PDU Information'; $('#pduInfo').innerHTML = rows.map(x => `<tr><td>${esc(x[0])}</td><td>${esc(String(x[1]))}</td></tr>`).join('');
@@ -1104,16 +1692,56 @@ $('#bSave').onclick = () => { $('#saveTxt').value = NS.serialize(); $('#dlgSave'
 $('#bCopy').onclick = () => { const t = $('#saveTxt'); t.select(); (navigator.clipboard ? navigator.clipboard.writeText(t.value) : Promise.reject()).then(() => toast('تم النسخ', 'good'), () => toast('حدّد النص ينسخ يدوياً')); };
 $('#bLoad').onclick = () => { try { const t = $('#saveTxt').value; JSON.parse(t); $('#dlgSave').close(); loadAndShow(() => NS.load(t)); toast('تم تحميل الشبكة', 'good'); } catch (e) { toast('النص غير صالح: ' + e.message, 'bad'); } };
 $('#bHelp').onclick = () => $('#dlgWelcome').showModal();
-$('#dlgWelcome').addEventListener('close', () => { try { localStorage.setItem('netlab-welcome2', '1'); } catch (e) { } });
-$('#wlScn').onclick = () => { $('#dlgWelcome').close(); loadAndShow(() => NS.loadScenario('lan')); toast('اضغط على PC0 ثم Desktop ثم Command Prompt، واكتب ping 192.168.2.10', 'good'); };
+$('#dlgWelcome').addEventListener('close', () => { try { localStorage.setItem('netlab-welcome4', '1'); } catch (e) { } });
+$('#wlScn').onclick = () => { $('#dlgWelcome').close(); loadAndShow(() => NS.loadScenario('city')); toast('اضغط Bank-PC1 ثم Desktop ثم Command Prompt، واكتب ping 192.168.2.10', 'good'); };
 $('#wlEmpty').onclick = () => { $('#dlgWelcome').close(); loadAndShow(() => NS.fresh()); };
 addEventListener('resize', () => requestAnimationFrame(fit));
+
+/* ---------- Physical View ---------- */
+let pv = { on: false, lv: 'city', b: 0, c: 0 };
+const loc = d => Object.assign({ b: 0, c: 0 }, d.loc);
+const RACKABLE = ['router', 'switch', 'firewall', 'modem', 'cloud'];
+function renderView() {
+  const box = $('#vw'); box.hidden = !pv.on; $('#bView').textContent = pv.on ? 'Physical' : 'Logical'; $('#bView').setAttribute('aria-pressed', pv.on);
+  if (!pv.on) return;
+  const ds = NS.state.devices, crumbs = [['city', 'City']]; if (pv.lv !== 'city') crumbs.push(['building', 'Building ' + (pv.b + 1)]); if (pv.lv === 'closet' || pv.lv === 'rack') crumbs.push(['closet', 'Wiring Closet ' + (pv.c + 1)]); if (pv.lv === 'rack') crumbs.push(['rack', 'Rack']);
+  let h = '<div class="crumbs">' + crumbs.map(c => `<button class="pbtn" type="button" data-lv="${c[0]}">${c[1]}</button>`).join('') + '</div><svg viewBox="0 0 360 300" preserveAspectRatio="xMidYMid meet">';
+  if (pv.lv === 'city') {
+    h += '<rect x="0" y="230" width="360" height="70" fill="color-mix(in srgb,var(--good) 18%,var(--work))"/><path d="M0 250h360" stroke="var(--muted)" stroke-dasharray="6 6"/>';
+    [0, 1, 2].forEach(b => { const n = ds.filter(d => loc(d).b === b).length, x = 25 + b * 112, ht = 90 + b * 25; h += `<g data-b="${b}" style="cursor:pointer"><rect class="vbox" x="${x}" y="${230 - ht}" width="90" height="${ht}" rx="4"/>${[0, 1, 2, 3].map(k => `<rect x="${x + 12 + (k % 2) * 36}" y="${230 - ht + 14 + Math.floor(k / 2) * 26}" width="18" height="14" fill="var(--accent)" opacity=".35"/>`).join('')}<text class="vtxt" x="${x + 45}" y="252">Building ${b + 1}</text><text class="vsub" x="${x + 45}" y="268">${n} devices</text></g>`; });
+  } else if (pv.lv === 'building') {
+    h += `<rect class="vbox" x="20" y="14" width="320" height="270" rx="6" style="cursor:default"/><text class="vtxt" x="180" y="38">Building ${pv.b + 1}</text>`;
+    [0, 1].forEach(c => { const n = ds.filter(d => loc(d).b === pv.b && loc(d).c === c).length, x = 40 + c * 150; h += `<g data-c="${c}" style="cursor:pointer"><rect class="vbox" x="${x}" y="70" width="130" height="150" rx="4" fill="var(--work)"/><path d="M${x + 20} 100h90M${x + 20} 130h90M${x + 20} 160h90" stroke="var(--muted)" stroke-width="3"/><text class="vtxt" x="${x + 65}" y="244">Wiring Closet ${c + 1}</text><text class="vsub" x="${x + 65}" y="260">${n} devices</text></g>`; });
+  } else {
+    const here = ds.filter(d => loc(d).b === pv.b && loc(d).c === pv.c), rk = here.filter(d => RACKABLE.includes(d.type)), other = here.filter(d => !RACKABLE.includes(d.type));
+    if (pv.lv === 'closet') {
+      h += `<text class="vtxt" x="180" y="30">Wiring Closet ${pv.c + 1}</text><g data-rack="1" style="cursor:pointer"><rect class="vbox" x="30" y="50" width="120" height="220" rx="4"/><text class="vtxt" x="90" y="170">Rack 1</text><text class="vsub" x="90" y="188">${rk.length} units</text></g>`;
+      h += other.slice(0, 8).map((d, k) => `<g transform="translate(${215 + (k % 3) * 52} ${80 + Math.floor(k / 3) * 70}) scale(.7)">${glyph(d)}<text class="vsub" y="34">${esc(d.name)}</text></g>`).join('') + (other.length ? '' : '<text class="vsub" x="250" y="150">لا توجد أجهزة طرفية هنا</text>');
+    } else {
+      h += `<text class="vtxt" x="180" y="26">Rack 1 · Wiring Closet ${pv.c + 1}</text><rect x="70" y="40" width="220" height="${Math.max(80, rk.length * 38 + 16)}" rx="4" fill="var(--chrome)" stroke="var(--ink)" stroke-width="2"/>`;
+      rk.forEach((d, k) => { const y = 50 + k * 38, up = d.ifaces.filter(i => NS.linkUp(i)).length; h += `<g data-open="${d.id}" style="cursor:pointer"><rect class="vbox" x="80" y="${y}" width="200" height="32" rx="3"/><text class="vtxt" x="180" y="${y + 14}">${esc(d.name)} · ${esc(modelLabel(d))}</text><text class="vsub" x="180" y="${y + 26}">${up}/${NS.dataIfaces(d).length} ports up · ${d.off ? 'OFF' : 'ON'}</text></g>`; });
+      if (!rk.length) h += '<text class="vsub" x="180" y="84">الراك فاضي. حدّد Location للجهاز من تبويب Physical.</text>';
+    }
+  }
+  box.innerHTML = h + '</svg>';
+}
+$('#vw').addEventListener('click', e => {
+  const t = e.target.closest('[data-lv],[data-b],[data-c],[data-rack],[data-open]'); if (!t) return;
+  if (t.dataset.lv) pv.lv = t.dataset.lv; else if (t.dataset.b !== undefined) { pv.b = +t.dataset.b; pv.lv = 'building'; } else if (t.dataset.c !== undefined) { pv.c = +t.dataset.c; pv.lv = 'closet'; } else if (t.dataset.rack) pv.lv = 'rack'; else if (t.dataset.open) return openWin(t.dataset.open);
+  renderView();
+});
+$('#bView').onclick = () => { pv.on = !pv.on; if (pv.on) pv.lv = 'city'; renderView(); toast(pv.on ? 'Physical View: City ← Building ← Wiring Closet ← Rack. غيّر مكان الجهاز من تبويب Physical' : 'Logical View'); };
+
+/* ---------- Multiuser ---------- */
+$('#bMulti').onclick = () => { $('#multiTxt').value = NS.serialize(); $('#dlgMulti').showModal(); };
+$('#mCopy').onclick = () => { const t = $('#multiTxt'); t.value = NS.serialize(); t.select(); (navigator.clipboard ? navigator.clipboard.writeText(t.value) : Promise.reject()).then(() => toast('تم نسخ كود شبكتك', 'good'), () => toast('حدّد النص وانسخه يدوياً')); };
+$('#mMerge').onclick = () => { try { const n = NS.merge($('#multiTxt').value); $('#dlgMulti').close(); render(); renderView(); requestAnimationFrame(fit); toast('تم دمج ' + n + ' جهاز من المستخدم الآخر على يمين شبكتك', 'good'); } catch (e) { toast('الكود غير صالح: ' + e.message, 'bad'); } };
 
 /* ---------- boot ---------- */
 initGrid();
 let restored = false;
-try { const s = localStorage.getItem('netlab-v2'); if (s) { NS.load(s); restored = NS.state.devices.length > 0; } } catch (e) { restored = false; }
-if (!restored) NS.loadScenario('lan');
-refreshPalette(); renderPanel(); render(); requestAnimationFrame(fit);
-try { if (!localStorage.getItem('netlab-welcome2')) setTimeout(() => $('#dlgWelcome').showModal(), 200); } catch (e) { }
+try { const s = localStorage.getItem('netlab-v4'); if (s) { NS.load(s); restored = NS.state.devices.length > 0; } } catch (e) { restored = false; }
+if (!restored) NS.loadScenario('city');
+refreshPalette(); renderPanel(); render(); renderView(); requestAnimationFrame(fit);
+try { if (!localStorage.getItem('netlab-welcome4')) setTimeout(() => $('#dlgWelcome').showModal(), 200); } catch (e) { }
 </script>
